@@ -1,3 +1,5 @@
+// Adapted from https://opencv-java-tutorials.readthedocs.io/en/latest/_images/03-08.png
+
 package net.javaman.flowkey
 
 import javafx.application.Platform
@@ -5,9 +7,8 @@ import javafx.beans.property.ObjectProperty
 import javafx.event.ActionEvent
 import javafx.fxml.FXML
 import javafx.scene.control.Button
-import javafx.scene.image.Image
 import javafx.scene.image.ImageView
-
+import org.opencv.core.Mat
 
 class StageController {
     @FXML
@@ -18,19 +19,26 @@ class StageController {
 
     private lateinit var camera: Camera
 
+    private val filter = Filter()
+
     @FXML
     fun startCamera(
         @Suppress("UNUSED_PARAMETER")
         actionEvent: ActionEvent
     ) {
         camera = Camera(
-            onFrame = { image: Image -> onFXThread(currentFrame.imageProperty(), image) },
+            onFrame = ::onFrame,
             onCameraStart = { startCameraButton.text = "Stop Camera" },
             onCameraStop = { startCameraButton.text = "Start Camera" },
             framesPerSecond = 60L,
             cameraId = 0
         )
         camera.toggle()
+    }
+
+    private fun onFrame(frame: Mat) {
+        val processedFrame = filter.apply(frame)
+        onFXThread(currentFrame.imageProperty(), Util.mat2Image(processedFrame))
     }
 
     fun setClosed() = camera.close()

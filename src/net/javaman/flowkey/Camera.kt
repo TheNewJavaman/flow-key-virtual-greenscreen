@@ -1,6 +1,5 @@
 package net.javaman.flowkey
 
-import javafx.scene.image.Image
 import net.javaman.flowkey.Util.ONE_SECOND_MS
 import org.opencv.core.Mat
 import org.opencv.videoio.VideoCapture
@@ -9,7 +8,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 class Camera constructor(
-    private val onFrame: (Image) -> Unit,
+    private val onFrame: (Mat) -> Unit,
     private val onCameraStart: () -> Unit,
     private val onCameraStop: () -> Unit,
     val framesPerSecond: Long = 60L,
@@ -29,9 +28,7 @@ class Camera constructor(
             if (capture.isOpened) {
                 cameraActive = true
                 val frameGrabber = Runnable {
-                    val frame = grabFrame()
-                    val imageToShow: Image = Util.mat2Image(frame)
-                    onFrame(imageToShow)
+                    onFrame(grabFrame())
                 }
                 timer = Executors.newSingleThreadScheduledExecutor()
                 timer!!.scheduleAtFixedRate(frameGrabber, 0, frameLatencyMs, TimeUnit.MILLISECONDS)

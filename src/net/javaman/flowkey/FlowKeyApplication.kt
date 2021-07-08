@@ -1,5 +1,3 @@
-// Followed this tutorial: https://opencv-java-tutorials.readthedocs.io/en/latest/_images/03-08.png
-
 package net.javaman.flowkey
 
 import javafx.application.Application
@@ -27,7 +25,7 @@ class FlowKeyApplication : Application() {
 
     override fun start(primaryStage: Stage) {
         val loader = FXMLLoader(FlowKeyApplication::class.java.getResource("Stage.fxml"))
-        rootElement = loader.load<BorderPane>()
+        rootElement = loader.load()
         val scene = Scene(rootElement, 800.0, 600.0)
         primaryStage.title = "Flow Key"
         primaryStage.scene = scene

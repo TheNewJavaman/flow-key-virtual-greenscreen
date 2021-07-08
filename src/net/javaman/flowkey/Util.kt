@@ -9,7 +9,7 @@ import java.awt.image.DataBufferByte
 object Util {
     const val ONE_SECOND_MS = 1000L
 
-    fun matToBufferedImage(original: Mat): BufferedImage {
+    private fun matToBufferedImage(original: Mat): BufferedImage {
         val width = original.width()
         val height = original.height()
         val channels = original.channels()
