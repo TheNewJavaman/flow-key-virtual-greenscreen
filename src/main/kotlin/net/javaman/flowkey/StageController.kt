@@ -8,11 +8,9 @@ import javafx.embed.swing.SwingFXUtils
 import javafx.event.ActionEvent
 import javafx.fxml.FXML
 import javafx.scene.control.Button
-import javafx.scene.image.Image
 import javafx.scene.image.ImageView
+import kotlinx.coroutines.DelicateCoroutinesApi
 import org.opencv.core.Mat
-import java.awt.image.BufferedImage
-import java.awt.image.DataBufferByte
 
 class StageController {
     @FXML
@@ -38,6 +36,7 @@ class StageController {
         camera.toggle()
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun onFrame(frame: Mat) {
         val processedFrame = filter.apply(frame)
         onFXThread(currentFrame.imageProperty(), SwingFXUtils.toFXImage(processedFrame, null))

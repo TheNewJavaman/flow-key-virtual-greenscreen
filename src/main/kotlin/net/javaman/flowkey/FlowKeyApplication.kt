@@ -11,7 +11,7 @@ import java.util.logging.Logger
 
 class FlowKeyApplication : Application() {
     companion object {
-        private val logger: Logger = Logger.getLogger(this::class.java.name)
+        private val logger = Logger.getLogger(FlowKeyApplication::class.java.simpleName)
 
         lateinit var rootElement: BorderPane
 

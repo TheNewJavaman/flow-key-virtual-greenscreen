@@ -12,7 +12,7 @@ class Camera constructor(
     private val onCameraStart: () -> Unit,
     private val onCameraStop: () -> Unit,
     framesPerSecond: Long = 30L,
-    private val cameraId: Int = 0,
+    private val cameraId: Int = 1,
     private val maxWidth: Int = DEFAULT_WIDTH_PIXELS,
     private val maxHeight: Int = DEFAULT_HEIGHT_PIXELS
 ) {
