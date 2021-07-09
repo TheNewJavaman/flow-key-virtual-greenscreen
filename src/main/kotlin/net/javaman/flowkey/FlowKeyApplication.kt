@@ -11,7 +11,7 @@ import java.util.logging.Logger
 
 class FlowKeyApplication : Application() {
     companion object {
-        private val logger: Logger = Logger.getLogger(FlowKeyApplication::class.java.name)
+        private val logger: Logger = Logger.getLogger(this::class.java.name)
 
         lateinit var rootElement: BorderPane
 
@@ -24,7 +24,7 @@ class FlowKeyApplication : Application() {
     }
 
     override fun start(primaryStage: Stage) {
-        val loader = FXMLLoader(FlowKeyApplication::class.java.getResource("Stage.fxml"))
+        val loader = FXMLLoader(this::class.java.getResource("Stage.fxml"))
         rootElement = loader.load()
         val scene = Scene(rootElement, 800.0, 600.0)
         primaryStage.title = "Flow Key"

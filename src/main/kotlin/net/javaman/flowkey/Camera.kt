@@ -1,8 +1,8 @@
 package net.javaman.flowkey
 
-import net.javaman.flowkey.Util.ONE_SECOND_MS
 import org.opencv.core.Mat
 import org.opencv.videoio.VideoCapture
+import org.opencv.videoio.Videoio
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -11,9 +11,18 @@ class Camera constructor(
     private val onFrame: (Mat) -> Unit,
     private val onCameraStart: () -> Unit,
     private val onCameraStop: () -> Unit,
-    val framesPerSecond: Long = 60L,
-    private val cameraId: Int = 0
+    framesPerSecond: Long = 30L,
+    private val cameraId: Int = 0,
+    private val maxWidth: Int = DEFAULT_WIDTH_PIXELS,
+    private val maxHeight: Int = DEFAULT_HEIGHT_PIXELS
 ) {
+    companion object {
+        const val DEFAULT_WIDTH_PIXELS = 1280
+        const val DEFAULT_HEIGHT_PIXELS = 720
+        const val COLOR_DEPTH = 3
+        const val ONE_SECOND_MS = 1000
+    }
+
     private var timer: ScheduledExecutorService? = null
 
     private val capture = VideoCapture()
@@ -27,6 +36,8 @@ class Camera constructor(
             capture.open(cameraId)
             if (capture.isOpened) {
                 cameraActive = true
+                capture.set(Videoio.CAP_PROP_FRAME_WIDTH, maxWidth.toDouble())
+                capture.set(Videoio.CAP_PROP_FRAME_HEIGHT, maxHeight.toDouble())
                 val frameGrabber = Runnable {
                     onFrame(grabFrame())
                 }
