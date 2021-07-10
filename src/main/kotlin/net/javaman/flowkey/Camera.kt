@@ -6,6 +6,7 @@ import org.opencv.videoio.Videoio
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.logging.Logger
 
 class Camera constructor(
     private val onFrame: (Mat) -> Unit,
@@ -31,6 +32,8 @@ class Camera constructor(
 
     private var frameLatencyMs = ONE_SECOND_MS / framesPerSecond
 
+    private val logger = Logger.getLogger(Camera::class.java.simpleName)
+
     fun toggle() {
         if (!cameraActive) {
             capture.open(cameraId)
@@ -55,7 +58,12 @@ class Camera constructor(
     private fun grabFrame(): Mat {
         val frame = Mat()
         if (capture.isOpened) {
-            capture.read(frame)
+            try {
+                capture.read(frame)
+            } catch (e: Exception) {
+                logger.warning { "Couldn't grab frame" }
+            }
+
         }
         return frame
     }

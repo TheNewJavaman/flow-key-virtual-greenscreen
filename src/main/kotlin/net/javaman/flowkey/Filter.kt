@@ -13,23 +13,18 @@ import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
 import java.util.logging.Logger
 
-
 class Filter constructor(
-    percentTolerance: Float = 1.0f,
-    private val originalKey: FloatArray = floatArrayOf(0.0f, 255.0f, 0.0f),
-    private val replacementKey: FloatArray = floatArrayOf(0.0f, 255.0f, 0.0f),
+    private val percentTolerance: Float = 0.025f,
+    private val colorKey: ByteArray = byteArrayOf(14, 44, 65),
+    private val replacementKey: ByteArray = byteArrayOf(255.toByte(), 255.toByte(), 0),
+    private val colorSpace: ColorSpace = ColorSpace.ALL,
+    private val noiseReduction: Int = 10,
     private val width: Int = DEFAULT_WIDTH_PIXELS,
     private val height: Int = DEFAULT_HEIGHT_PIXELS,
     platformIndex: Int = 0,
     deviceType: Long = CL_DEVICE_TYPE_ALL,
     deviceIndex: Int = 0
 ) {
-    companion object {
-        const val STRING_ALLOC_BYTES = 1024
-    }
-
-    private val keyTolerance = percentTolerance * 255.0
-
     private val programSource = this::class.java.getResource("Filter.cl")!!.readText()
 
     private var platform: cl_platform_id?
@@ -57,7 +52,7 @@ class Filter constructor(
         platform = platforms[platformIndex]
         contextProperties = cl_context_properties()
         contextProperties.addProperty(CL_CONTEXT_PLATFORM.toLong(), platform)
-        logger.info { "Selected platform ${getPlatformInfo(CL_PLATFORM_VENDOR)} ${getPlatformInfo(CL_PLATFORM_NAME)}" }
+        logger.info { "Selected platform ${getPlatformName()}" }
 
         val numDevicesArray = IntArray(1)
         clGetDeviceIDs(platform, deviceType, 0, null, numDevicesArray)
@@ -65,7 +60,7 @@ class Filter constructor(
         val devices = arrayOfNulls<cl_device_id>(numDevices)
         clGetDeviceIDs(platform, deviceType, numDevices, devices, null)
         device = devices[deviceIndex]
-        logger.info { "Selected device ${getDeviceInfo(CL_DEVICE_VENDOR)} ${getDeviceInfo(CL_DEVICE_NAME)}" }
+        logger.info { "Selected device ${getDeviceName()}" }
 
         context = clCreateContext(contextProperties, 1, arrayOf(device), null, null, null)
         val properties = cl_queue_properties()
@@ -81,49 +76,90 @@ class Filter constructor(
         clBuildProgram(program, 0, null, null, null, null)
     }
 
-    private fun getPlatformInfo(paramName: Int): String {
+    private fun getPlatformName(): String {
         val size = LongArray(1)
-        clGetPlatformInfo(platform, paramName, 0, null, size)
+        clGetPlatformInfo(platform, CL_PLATFORM_NAME, 0, null, size)
         val buffer = ByteArray(size[0].toInt())
-        clGetPlatformInfo(platform, paramName, buffer.size.toLong(), Pointer.to(buffer), null)
+        clGetPlatformInfo(platform, CL_PLATFORM_NAME, buffer.size.toLong(), Pointer.to(buffer), null)
         return String(buffer, 0, buffer.size - 1)
     }
 
-    private fun getDeviceInfo(paramName: Int): String {
+    private fun getDeviceName(): String {
         val size = LongArray(1)
-        clGetDeviceInfo(device, paramName, 0, null, size)
+        clGetDeviceInfo(device, CL_DEVICE_NAME, 0, null, size)
         val buffer = ByteArray(size[0].toInt())
-        clGetDeviceInfo(device, paramName, buffer.size.toLong(), Pointer.to(buffer), null)
+        clGetDeviceInfo(device, CL_DEVICE_NAME, buffer.size.toLong(), Pointer.to(buffer), null)
         return String(buffer, 0, buffer.size - 1)
     }
 
     fun apply(input: Mat): BufferedImage {
         val size = input.cols() * input.rows() * COLOR_DEPTH
-        val srcBuffer = ByteArray(size = size)
-        val dstBuffer = ByteArray(size = size)
-        val srcPtr = Pointer.to(srcBuffer)
-        val dstPtr = Pointer.to(dstBuffer)
-        input.get(0, 0, srcBuffer)
 
-        val srcMem = clCreateBuffer(
+        val inputBuffer = ByteArray(size = size)
+        val outputBuffer = ByteArray(size = size)
+        val floatOptionsBuffer = floatArrayOf(percentTolerance)
+        val intOptionsBuffer = intArrayOf(colorSpace.i, noiseReduction)
+
+        input.get(0, 0, inputBuffer)
+
+        val inputPtr = Pointer.to(inputBuffer)
+        val outputPtr = Pointer.to(outputBuffer)
+        val colorKeyPtr = Pointer.to(colorKey)
+        val replacementKeyPtr = Pointer.to(replacementKey)
+        val floatOptionsPtr = Pointer.to(floatOptionsBuffer)
+        val intOptionsPtr = Pointer.to(intOptionsBuffer)
+
+        val inputMem = clCreateBuffer(
             context,
             CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR,
             (Sizeof.cl_char * size).toLong(),
-            srcPtr,
+            inputPtr,
             null
         )
-        val dstMem = clCreateBuffer(
+        val outputMem = clCreateBuffer(
             context,
             CL_MEM_READ_WRITE,
             (Sizeof.cl_char * size).toLong(),
             null,
             null
         )
+        val colorKeyMem = clCreateBuffer(
+            context,
+            CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR,
+            (Sizeof.cl_char * COLOR_DEPTH).toLong(),
+            colorKeyPtr,
+            null
+        )
+        val replacementKeyMem = clCreateBuffer(
+            context,
+            CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR,
+            (Sizeof.cl_char * COLOR_DEPTH).toLong(),
+            replacementKeyPtr,
+            null
+        )
+        val floatOptionsMem = clCreateBuffer(
+            context,
+            CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR,
+            (Sizeof.cl_float * floatOptionsBuffer.size).toLong(),
+            floatOptionsPtr,
+            null
+        )
+        val intOptionsMem = clCreateBuffer(
+            context,
+            CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR,
+            (Sizeof.cl_int * intOptionsBuffer.size).toLong(),
+            intOptionsPtr,
+            null
+        )
 
-        val kernel = clCreateKernel(program, "sampleKernel", null)
+        val kernel = clCreateKernel(program, "greenscreenKernel", null)
         var a = 0
-        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(srcMem))
-        clSetKernelArg(kernel, a, Sizeof.cl_mem.toLong(), Pointer.to(dstMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(inputMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(outputMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(colorKeyMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(replacementKeyMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(floatOptionsMem))
+        clSetKernelArg(kernel, a, Sizeof.cl_mem.toLong(), Pointer.to(intOptionsMem))
         val globalWorkSize = longArrayOf(size.toLong())
 
         clEnqueueNDRangeKernel(
@@ -139,23 +175,27 @@ class Filter constructor(
         )
         clEnqueueReadBuffer(
             commandQueue,
-            dstMem,
+            outputMem,
             CL_TRUE,
             0,
             (size * Sizeof.cl_char).toLong(),
-            dstPtr,
+            outputPtr,
             0,
             null,
             null
         )
 
-        clReleaseMemObject(srcMem)
-        clReleaseMemObject(dstMem)
+        clReleaseMemObject(inputMem)
+        clReleaseMemObject(outputMem)
+        clReleaseMemObject(colorKeyMem)
+        clReleaseMemObject(replacementKeyMem)
+        clReleaseMemObject(floatOptionsMem)
+        clReleaseMemObject(intOptionsMem)
         clReleaseKernel(kernel)
 
         val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
         val targetPixels = (bufferedImage.raster.dataBuffer as DataBufferByte).data
-        System.arraycopy(dstBuffer, 0, targetPixels, 0, input.cols() * input.rows() * COLOR_DEPTH)
+        System.arraycopy(outputBuffer, 0, targetPixels, 0, input.cols() * input.rows() * COLOR_DEPTH)
         return bufferedImage
     }
 
@@ -163,5 +203,12 @@ class Filter constructor(
         clReleaseProgram(program)
         clReleaseCommandQueue(commandQueue)
         clReleaseContext(context)
+    }
+
+    enum class ColorSpace(val i: Int) {
+        BLUE(0),
+        RED(1),
+        GREEN(2),
+        ALL(3)
     }
 }
