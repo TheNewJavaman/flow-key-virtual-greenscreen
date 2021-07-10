@@ -6,11 +6,11 @@ __kernel void initialComparisonKernel(
     __global const float *floatOptions,
     __global const int *intOptions
 ) {
+    float percentTolerance = floatOptions[PERCENT_TOLERANCE];
+    int colorSpace = intOptions[COLOR_SPACE];
     int gid = get_global_id(0);
-    if (gid % 3 == 0) {
-        float percentTolerance = floatOptions[0];
-        int colorSpace = intOptions[0];
 
+    if (gid % 3 == 0) {
         float colorDiff[3];
         for (int i = 0; i < 3; i++) {
             colorDiff[i] = abs(input[gid + i] - colorKey[i]);

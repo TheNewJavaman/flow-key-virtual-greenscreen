@@ -11,5 +11,6 @@ enum FloatOptions {
 
 enum IntOptions {
     COLOR_SPACE = 0,
-    NOISE_REDUCTION = 1
+    WIDTH = 1,
+    HEIGHT = 2
 };

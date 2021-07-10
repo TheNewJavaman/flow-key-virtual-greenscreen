@@ -13,8 +13,8 @@ import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
 
 class Filter constructor(
-    private val percentTolerance: Float = 0.1f,
-    private val colorKey: ByteArray = byteArrayOf(123, 156.toByte(), 151.toByte()),
+    private val percentTolerance: Float = 0.0025f,
+    private val colorKey: ByteArray = byteArrayOf(2, 2, 2),
     private val replacementKey: ByteArray = byteArrayOf(255.toByte(), 255.toByte(), 0),
     private val colorSpace: ColorSpace = ColorSpace.ALL,
     private val noiseReduction: Int = 10,
@@ -25,7 +25,7 @@ class Filter constructor(
     deviceIndex: Int = 0
 ) {
     companion object {
-        @Suppress("unused")
+        @Suppress("Unused")
         enum class ColorSpace(val i: Int) {
             BLUE(0),
             RED(1),
@@ -33,15 +33,16 @@ class Filter constructor(
             ALL(3)
         }
 
-        @Suppress("unused")
+        @Suppress("Unused")
         enum class FloatOption(val i: Int) {
-            PERCENT_TOLERANCE(0);
+            PERCENT_TOLERANCE(0)
         }
 
-        @Suppress("unused")
+        @Suppress("Unused")
         enum class IntOption(val i: Int) {
             COLOR_SPACE(0),
-            NOISE_REDUCTION(1);
+            WIDTH(1),
+            HEIGHT(2)
         }
 
         enum class ClMemOperation(val flags: Long) {
@@ -89,8 +90,8 @@ class Filter constructor(
 
         val commonSource = this::class.java.getResource("Common.cl")!!.readText()
         val initialComparisonSource = this::class.java.getResource("InitialComparison.cl")!!.readText()
-        val refinementComparisonSource = this::class.java.getResource("RefinementComparison.cl")!!.readText()
-        val sources = arrayOf(commonSource, initialComparisonSource, refinementComparisonSource)
+        val noiseReductionSource = this::class.java.getResource("NoiseReduction.cl")!!.readText()
+        val sources = arrayOf(commonSource, initialComparisonSource, noiseReductionSource)
         program = clCreateProgramWithSource(
             context,
             sources.size,
@@ -123,9 +124,11 @@ class Filter constructor(
         input.get(0, 0, initialComparisonInput)
         val initialComparisonOutput = applyInitialComparison(initialComparisonInput)
 
+        val noiseReductionOutput = applyNoiseReductionHandler(initialComparisonOutput, initialComparisonInput)
+
         val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
         val targetPixels = (bufferedImage.raster.dataBuffer as DataBufferByte).data
-        System.arraycopy(initialComparisonOutput, 0, targetPixels, 0, size)
+        System.arraycopy(noiseReductionOutput, 0, targetPixels, 0, size)
         return bufferedImage
     }
 
@@ -133,7 +136,7 @@ class Filter constructor(
         val size = inputBuffer.size
         val outputBuffer = ByteArray(size = size)
         val floatOptionsBuffer = floatArrayOf(percentTolerance)
-        val intOptionsBuffer = intArrayOf(colorSpace.i, noiseReduction)
+        val intOptionsBuffer = intArrayOf(colorSpace.i)
 
         val inputPtr = Pointer.to(inputBuffer)
         val outputPtr = Pointer.to(outputBuffer)
@@ -187,6 +190,77 @@ class Filter constructor(
         clReleaseMemObject(colorKeyMem)
         clReleaseMemObject(replacementKeyMem)
         clReleaseMemObject(floatOptionsMem)
+        clReleaseMemObject(intOptionsMem)
+        clReleaseKernel(kernel)
+
+        return outputBuffer
+    }
+
+    private fun applyNoiseReductionHandler(
+        inputBuffer: ByteArray,
+        templateBuffer: ByteArray,
+        repeat: Int = noiseReduction
+    ): ByteArray {
+        var outputBuffer = inputBuffer.copyOf()
+        for (i in 1..repeat) {
+            outputBuffer = applyNoiseReduction(outputBuffer, templateBuffer)
+        }
+        return outputBuffer
+    }
+
+    private fun applyNoiseReduction(inputBuffer: ByteArray, templateBuffer: ByteArray): ByteArray {
+        val size = inputBuffer.size
+        val outputBuffer = ByteArray(size = size)
+        val intOptionsBuffer = intArrayOf(0, width, height)
+
+        val inputPtr = Pointer.to(inputBuffer)
+        val outputPtr = Pointer.to(outputBuffer)
+        val templatePtr = Pointer.to(templateBuffer)
+        val colorKeyPtr = Pointer.to(replacementKey)
+        val intOptionsPtr = Pointer.to(intOptionsBuffer)
+
+        val inputMem = allocMem(inputPtr, ClMemOperation.READ, Sizeof.cl_char * size)
+        val outputMem = allocMem(null, ClMemOperation.WRITE, Sizeof.cl_char * size)
+        val templateMem = allocMem(templatePtr, ClMemOperation.READ, Sizeof.cl_char * size)
+        val colorKeyMem = allocMem(colorKeyPtr, ClMemOperation.READ, Sizeof.cl_char * COLOR_DEPTH)
+        val intOptionsMem = allocMem(intOptionsPtr, ClMemOperation.READ, Sizeof.cl_int * intOptionsBuffer.size)
+
+        val kernel = clCreateKernel(program, "noiseReductionKernel", null)
+        var a = 0
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(inputMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(outputMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(templateMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(colorKeyMem))
+        clSetKernelArg(kernel, a, Sizeof.cl_mem.toLong(), Pointer.to(intOptionsMem))
+        val globalWorkSize = longArrayOf(size.toLong())
+
+        clEnqueueNDRangeKernel(
+            commandQueue,
+            kernel,
+            1,
+            null,
+            globalWorkSize,
+            null,
+            0,
+            null,
+            null
+        )
+        clEnqueueReadBuffer(
+            commandQueue,
+            outputMem,
+            CL_TRUE,
+            0,
+            (Sizeof.cl_char * size).toLong(),
+            outputPtr,
+            0,
+            null,
+            null
+        )
+
+        clReleaseMemObject(inputMem)
+        clReleaseMemObject(outputMem)
+        clReleaseMemObject(templateMem)
+        clReleaseMemObject(colorKeyMem)
         clReleaseMemObject(intOptionsMem)
         clReleaseKernel(kernel)
 

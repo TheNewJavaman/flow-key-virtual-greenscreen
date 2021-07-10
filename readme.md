@@ -17,7 +17,7 @@ green color.
     4. Send frame to virtual camera
 3. Display original frame
 
-## Filter flow
+## Filter Flow
 
 The filter works by first comparing pixels to a certain preselected color key, then moving outward from each valid pixel
 and comparing adjacent pixels to the previous pixel. This "flow" outward from the original pixels is where this
