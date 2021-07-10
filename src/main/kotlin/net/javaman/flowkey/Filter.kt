@@ -11,11 +11,10 @@ import org.jocl.CL.*
 import org.opencv.core.Mat
 import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
-import java.util.logging.Logger
 
 class Filter constructor(
-    private val percentTolerance: Float = 0.025f,
-    private val colorKey: ByteArray = byteArrayOf(14, 44, 65),
+    private val percentTolerance: Float = 0.1f,
+    private val colorKey: ByteArray = byteArrayOf(123, 156.toByte(), 151.toByte()),
     private val replacementKey: ByteArray = byteArrayOf(255.toByte(), 255.toByte(), 0),
     private val colorSpace: ColorSpace = ColorSpace.ALL,
     private val noiseReduction: Int = 10,
@@ -25,7 +24,31 @@ class Filter constructor(
     deviceType: Long = CL_DEVICE_TYPE_ALL,
     deviceIndex: Int = 0
 ) {
-    private val programSource = this::class.java.getResource("Filter.cl")!!.readText()
+    companion object {
+        @Suppress("unused")
+        enum class ColorSpace(val i: Int) {
+            BLUE(0),
+            RED(1),
+            GREEN(2),
+            ALL(3)
+        }
+
+        @Suppress("unused")
+        enum class FloatOption(val i: Int) {
+            PERCENT_TOLERANCE(0);
+        }
+
+        @Suppress("unused")
+        enum class IntOption(val i: Int) {
+            COLOR_SPACE(0),
+            NOISE_REDUCTION(1);
+        }
+
+        enum class ClMemOperation(val flags: Long) {
+            READ(CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR),
+            WRITE(CL_MEM_READ_WRITE)
+        }
+    }
 
     private var platform: cl_platform_id?
 
@@ -38,8 +61,6 @@ class Filter constructor(
     private var commandQueue: cl_command_queue
 
     private var program: cl_program
-
-    private val logger = Logger.getLogger(Filter::class.java.simpleName)
 
     init {
         setExceptionsEnabled(true)
@@ -66,10 +87,14 @@ class Filter constructor(
         val properties = cl_queue_properties()
         commandQueue = clCreateCommandQueueWithProperties(context, device, properties, null)
 
+        val commonSource = this::class.java.getResource("Common.cl")!!.readText()
+        val initialComparisonSource = this::class.java.getResource("InitialComparison.cl")!!.readText()
+        val refinementComparisonSource = this::class.java.getResource("RefinementComparison.cl")!!.readText()
+        val sources = arrayOf(commonSource, initialComparisonSource, refinementComparisonSource)
         program = clCreateProgramWithSource(
             context,
-            1,
-            arrayOf(programSource),
+            sources.size,
+            sources,
             null,
             null
         )
@@ -94,13 +119,21 @@ class Filter constructor(
 
     fun apply(input: Mat): BufferedImage {
         val size = input.cols() * input.rows() * COLOR_DEPTH
+        val initialComparisonInput = ByteArray(size = size)
+        input.get(0, 0, initialComparisonInput)
+        val initialComparisonOutput = applyInitialComparison(initialComparisonInput)
 
-        val inputBuffer = ByteArray(size = size)
+        val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
+        val targetPixels = (bufferedImage.raster.dataBuffer as DataBufferByte).data
+        System.arraycopy(initialComparisonOutput, 0, targetPixels, 0, size)
+        return bufferedImage
+    }
+
+    private fun applyInitialComparison(inputBuffer: ByteArray): ByteArray {
+        val size = inputBuffer.size
         val outputBuffer = ByteArray(size = size)
         val floatOptionsBuffer = floatArrayOf(percentTolerance)
         val intOptionsBuffer = intArrayOf(colorSpace.i, noiseReduction)
-
-        input.get(0, 0, inputBuffer)
 
         val inputPtr = Pointer.to(inputBuffer)
         val outputPtr = Pointer.to(outputBuffer)
@@ -109,50 +142,14 @@ class Filter constructor(
         val floatOptionsPtr = Pointer.to(floatOptionsBuffer)
         val intOptionsPtr = Pointer.to(intOptionsBuffer)
 
-        val inputMem = clCreateBuffer(
-            context,
-            CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR,
-            (Sizeof.cl_char * size).toLong(),
-            inputPtr,
-            null
-        )
-        val outputMem = clCreateBuffer(
-            context,
-            CL_MEM_READ_WRITE,
-            (Sizeof.cl_char * size).toLong(),
-            null,
-            null
-        )
-        val colorKeyMem = clCreateBuffer(
-            context,
-            CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR,
-            (Sizeof.cl_char * COLOR_DEPTH).toLong(),
-            colorKeyPtr,
-            null
-        )
-        val replacementKeyMem = clCreateBuffer(
-            context,
-            CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR,
-            (Sizeof.cl_char * COLOR_DEPTH).toLong(),
-            replacementKeyPtr,
-            null
-        )
-        val floatOptionsMem = clCreateBuffer(
-            context,
-            CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR,
-            (Sizeof.cl_float * floatOptionsBuffer.size).toLong(),
-            floatOptionsPtr,
-            null
-        )
-        val intOptionsMem = clCreateBuffer(
-            context,
-            CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR,
-            (Sizeof.cl_int * intOptionsBuffer.size).toLong(),
-            intOptionsPtr,
-            null
-        )
+        val inputMem = allocMem(inputPtr, ClMemOperation.READ, Sizeof.cl_char * size)
+        val outputMem = allocMem(null, ClMemOperation.WRITE, Sizeof.cl_char * size)
+        val colorKeyMem = allocMem(colorKeyPtr, ClMemOperation.READ, Sizeof.cl_char * COLOR_DEPTH)
+        val replacementKeyMem = allocMem(replacementKeyPtr, ClMemOperation.READ, Sizeof.cl_char * COLOR_DEPTH)
+        val floatOptionsMem = allocMem(floatOptionsPtr, ClMemOperation.READ, Sizeof.cl_float * floatOptionsBuffer.size)
+        val intOptionsMem = allocMem(intOptionsPtr, ClMemOperation.READ, Sizeof.cl_int * intOptionsBuffer.size)
 
-        val kernel = clCreateKernel(program, "greenscreenKernel", null)
+        val kernel = clCreateKernel(program, "initialComparisonKernel", null)
         var a = 0
         clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(inputMem))
         clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(outputMem))
@@ -193,22 +190,20 @@ class Filter constructor(
         clReleaseMemObject(intOptionsMem)
         clReleaseKernel(kernel)
 
-        val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
-        val targetPixels = (bufferedImage.raster.dataBuffer as DataBufferByte).data
-        System.arraycopy(outputBuffer, 0, targetPixels, 0, input.cols() * input.rows() * COLOR_DEPTH)
-        return bufferedImage
+        return outputBuffer
     }
+
+    private fun allocMem(ptr: Pointer?, op: ClMemOperation, size: Int) = clCreateBuffer(
+        context,
+        op.flags,
+        size.toLong(),
+        ptr,
+        null
+    )
 
     fun close() {
         clReleaseProgram(program)
         clReleaseCommandQueue(commandQueue)
         clReleaseContext(context)
-    }
-
-    enum class ColorSpace(val i: Int) {
-        BLUE(0),
-        RED(1),
-        GREEN(2),
-        ALL(3)
     }
 }

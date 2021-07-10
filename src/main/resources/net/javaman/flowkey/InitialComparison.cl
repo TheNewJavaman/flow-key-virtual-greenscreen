@@ -1,20 +1,4 @@
-enum ColorSpace {
-    BLUE = 0,
-    GREEN = 1,
-    RED = 2,
-    ALL = 3
-};
-
-enum FloatOptions {
-    PERCENT_TOLERANCE = 0
-};
-
-enum IntOptions {
-    COLOR_SPACE = 0,
-    NOISE_REDUCTION = 1
-};
-
-__kernel void greenscreenKernel(
+__kernel void initialComparisonKernel(
     __global const char *input,
     __global char *output,
     __global const char *colorKey,
@@ -26,7 +10,6 @@ __kernel void greenscreenKernel(
     if (gid % 3 == 0) {
         float percentTolerance = floatOptions[0];
         int colorSpace = intOptions[0];
-        int noiseReduction = intOptions[1];
 
         float colorDiff[3];
         for (int i = 0; i < 3; i++) {
@@ -49,7 +32,5 @@ __kernel void greenscreenKernel(
                 output[gid + i] = input[gid + i];
             }
         }
-
-
     }
 }

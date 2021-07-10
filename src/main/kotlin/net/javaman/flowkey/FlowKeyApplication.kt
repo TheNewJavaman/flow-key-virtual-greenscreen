@@ -6,13 +6,13 @@ import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
 import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
+import mu.KotlinLogging
 import org.opencv.core.Core
-import java.util.logging.Logger
+
+val logger = KotlinLogging.logger {}
 
 class FlowKeyApplication : Application() {
     companion object {
-        private val logger = Logger.getLogger(FlowKeyApplication::class.java.simpleName)
-
         lateinit var rootElement: BorderPane
 
         @JvmStatic

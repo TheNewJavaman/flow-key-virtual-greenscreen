@@ -6,14 +6,13 @@ import org.opencv.videoio.Videoio
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import java.util.logging.Logger
 
 class Camera constructor(
     private val onFrame: (Mat) -> Unit,
     private val onCameraStart: () -> Unit,
     private val onCameraStop: () -> Unit,
     framesPerSecond: Long = 30L,
-    private val cameraId: Int = 1,
+    private val cameraId: Int = 0,
     private val maxWidth: Int = DEFAULT_WIDTH_PIXELS,
     private val maxHeight: Int = DEFAULT_HEIGHT_PIXELS
 ) {
@@ -31,8 +30,6 @@ class Camera constructor(
     private var cameraActive = false
 
     private var frameLatencyMs = ONE_SECOND_MS / framesPerSecond
-
-    private val logger = Logger.getLogger(Camera::class.java.simpleName)
 
     fun toggle() {
         if (!cameraActive) {
@@ -61,9 +58,8 @@ class Camera constructor(
             try {
                 capture.read(frame)
             } catch (e: Exception) {
-                logger.warning { "Couldn't grab frame" }
+                logger.warn(e) { "Couldn't grab frame" }
             }
-
         }
         return frame
     }
