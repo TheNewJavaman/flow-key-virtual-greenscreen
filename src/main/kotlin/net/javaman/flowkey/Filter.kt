@@ -13,11 +13,13 @@ import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
 
 class Filter constructor(
-    private val percentTolerance: Float = 0.0025f,
-    private val colorKey: ByteArray = byteArrayOf(2, 2, 2),
+    private val percentTolerance: Float = 0.03f,
+    private val gradientTolerance: Float = 1.0f,
+    private val colorKey: ByteArray = byteArrayOf(146.toByte(), 163.toByte(), 160.toByte()),
     private val replacementKey: ByteArray = byteArrayOf(255.toByte(), 255.toByte(), 0),
     private val colorSpace: ColorSpace = ColorSpace.ALL,
-    private val noiseReduction: Int = 10,
+    private val noiseReduction: Int = 3,
+    private val flowDepth: Int = 10,
     private val width: Int = DEFAULT_WIDTH_PIXELS,
     private val height: Int = DEFAULT_HEIGHT_PIXELS,
     platformIndex: Int = 0,
@@ -35,7 +37,8 @@ class Filter constructor(
 
         @Suppress("Unused")
         enum class FloatOption(val i: Int) {
-            PERCENT_TOLERANCE(0)
+            PERCENT_TOLERANCE(0),
+            GRADIENT_TOLERANCE(1)
         }
 
         @Suppress("Unused")
@@ -88,10 +91,11 @@ class Filter constructor(
         val properties = cl_queue_properties()
         commandQueue = clCreateCommandQueueWithProperties(context, device, properties, null)
 
-        val commonSource = this::class.java.getResource("Common.cl")!!.readText()
+        val utilSource = this::class.java.getResource("Util.cl")!!.readText()
         val initialComparisonSource = this::class.java.getResource("InitialComparison.cl")!!.readText()
         val noiseReductionSource = this::class.java.getResource("NoiseReduction.cl")!!.readText()
-        val sources = arrayOf(commonSource, initialComparisonSource, noiseReductionSource)
+        val flowKeySource = this::class.java.getResource("FlowKey.cl")!!.readText()
+        val sources = arrayOf(utilSource, initialComparisonSource, noiseReductionSource, flowKeySource)
         program = clCreateProgramWithSource(
             context,
             sources.size,
@@ -120,15 +124,17 @@ class Filter constructor(
 
     fun apply(input: Mat): BufferedImage {
         val size = input.cols() * input.rows() * COLOR_DEPTH
-        val initialComparisonInput = ByteArray(size = size)
-        input.get(0, 0, initialComparisonInput)
-        val initialComparisonOutput = applyInitialComparison(initialComparisonInput)
+        val originalImage = ByteArray(size = size)
+        input.get(0, 0, originalImage)
 
-        val noiseReductionOutput = applyNoiseReductionHandler(initialComparisonOutput, initialComparisonInput)
+        val initialComparisonOutput = applyInitialComparison(originalImage)
+        val noiseReduction1Output = applyNoiseReductionHandler(initialComparisonOutput, originalImage)
+        val flowKeyOutput = applyFlowKeyHandler(noiseReduction1Output, originalImage)
+        val noiseReduction2Output = applyNoiseReductionHandler(flowKeyOutput, originalImage)
 
         val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
         val targetPixels = (bufferedImage.raster.dataBuffer as DataBufferByte).data
-        System.arraycopy(noiseReductionOutput, 0, targetPixels, 0, size)
+        System.arraycopy(noiseReduction2Output, 0, targetPixels, 0, size)
         return bufferedImage
     }
 
@@ -261,6 +267,82 @@ class Filter constructor(
         clReleaseMemObject(outputMem)
         clReleaseMemObject(templateMem)
         clReleaseMemObject(colorKeyMem)
+        clReleaseMemObject(intOptionsMem)
+        clReleaseKernel(kernel)
+
+        return outputBuffer
+    }
+
+    private fun applyFlowKeyHandler(
+        inputBuffer: ByteArray,
+        templateBuffer: ByteArray,
+        repeat: Int = flowDepth
+    ): ByteArray {
+        var outputBuffer = inputBuffer.copyOf()
+        for (i in 1..repeat) {
+            outputBuffer = applyFlowKey(outputBuffer, templateBuffer)
+        }
+        return outputBuffer
+    }
+
+    private fun applyFlowKey(inputBuffer: ByteArray, templateBuffer: ByteArray): ByteArray {
+        val size = inputBuffer.size
+        val outputBuffer = ByteArray(size = size)
+        val floatOptionsBuffer = floatArrayOf(0.0f, gradientTolerance)
+        val intOptionsBuffer = intArrayOf(colorSpace.i, width, height)
+
+        val inputPtr = Pointer.to(inputBuffer)
+        val outputPtr = Pointer.to(outputBuffer)
+        val templatePtr = Pointer.to(templateBuffer)
+        val colorKeyPtr = Pointer.to(replacementKey)
+        val floatOptionsPtr = Pointer.to(floatOptionsBuffer)
+        val intOptionsPtr = Pointer.to(intOptionsBuffer)
+
+        val inputMem = allocMem(inputPtr, ClMemOperation.READ, Sizeof.cl_char * size)
+        val outputMem = allocMem(null, ClMemOperation.WRITE, Sizeof.cl_char * size)
+        val templateMem = allocMem(templatePtr, ClMemOperation.READ, Sizeof.cl_char * size)
+        val colorKeyMem = allocMem(colorKeyPtr, ClMemOperation.READ, Sizeof.cl_char * COLOR_DEPTH)
+        val floatOptionsMem = allocMem(floatOptionsPtr, ClMemOperation.READ, Sizeof.cl_float * floatOptionsBuffer.size)
+        val intOptionsMem = allocMem(intOptionsPtr, ClMemOperation.READ, Sizeof.cl_int * intOptionsBuffer.size)
+
+        val kernel = clCreateKernel(program, "flowKeyKernel", null)
+        var a = 0
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(inputMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(outputMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(templateMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(colorKeyMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(floatOptionsMem))
+        clSetKernelArg(kernel, a, Sizeof.cl_mem.toLong(), Pointer.to(intOptionsMem))
+        val globalWorkSize = longArrayOf(size.toLong())
+
+        clEnqueueNDRangeKernel(
+            commandQueue,
+            kernel,
+            1,
+            null,
+            globalWorkSize,
+            null,
+            0,
+            null,
+            null
+        )
+        clEnqueueReadBuffer(
+            commandQueue,
+            outputMem,
+            CL_TRUE,
+            0,
+            (Sizeof.cl_char * size).toLong(),
+            outputPtr,
+            0,
+            null,
+            null
+        )
+
+        clReleaseMemObject(inputMem)
+        clReleaseMemObject(outputMem)
+        clReleaseMemObject(templateMem)
+        clReleaseMemObject(colorKeyMem)
+        clReleaseMemObject(floatOptionsMem)
         clReleaseMemObject(intOptionsMem)
         clReleaseKernel(kernel)
 

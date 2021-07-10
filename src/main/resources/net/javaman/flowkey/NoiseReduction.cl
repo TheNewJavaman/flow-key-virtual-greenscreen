@@ -49,15 +49,3 @@ __kernel void noiseReductionKernel(
         }
     }
 }
-
-int checkPixelEquality(const char *input, const int i, const char *colorKey) {
-    int diffSum = 0;
-    for (int j = 0; j < 3; j++) {
-        diffSum += abs(input[i + j] - colorKey[j]);
-    }
-    if (diffSum == 0) {
-        return 1;
-    } else {
-        return 0;
-    }
-}

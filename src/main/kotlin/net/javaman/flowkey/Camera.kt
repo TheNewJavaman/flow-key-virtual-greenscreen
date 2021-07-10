@@ -14,7 +14,8 @@ class Camera constructor(
     framesPerSecond: Long = 30L,
     private val cameraId: Int = 0,
     private val maxWidth: Int = DEFAULT_WIDTH_PIXELS,
-    private val maxHeight: Int = DEFAULT_HEIGHT_PIXELS
+    private val maxHeight: Int = DEFAULT_HEIGHT_PIXELS,
+    private val threads: Int = 8
 ) {
     companion object {
         const val DEFAULT_WIDTH_PIXELS = 1280
@@ -41,7 +42,7 @@ class Camera constructor(
                 val frameGrabber = Runnable {
                     onFrame(grabFrame())
                 }
-                timer = Executors.newSingleThreadScheduledExecutor()
+                timer = Executors.newScheduledThreadPool(threads)
                 timer!!.scheduleAtFixedRate(frameGrabber, 0, frameLatencyMs, TimeUnit.MILLISECONDS)
                 onCameraStart()
             }

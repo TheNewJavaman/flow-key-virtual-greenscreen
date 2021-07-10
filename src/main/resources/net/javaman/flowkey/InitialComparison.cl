@@ -11,18 +11,7 @@ __kernel void initialComparisonKernel(
     int gid = get_global_id(0);
 
     if (gid % 3 == 0) {
-        float colorDiff[3];
-        for (int i = 0; i < 3; i++) {
-            colorDiff[i] = abs(input[gid + i] - colorKey[i]);
-        }
-        float percentDiff = 0;
-        if (colorSpace < 3) {
-            percentDiff = colorDiff[colorSpace] / 255.0;
-        } else {
-            for (int i = 0; i < 3; i++) {
-                percentDiff += colorDiff[i] / 765.0;
-            }
-        }
+        float percentDiff = calcColorDiff(input, gid, colorKey, 0, colorSpace);
         if (percentDiff < percentTolerance) {
             for (int i = 0; i < 3; i++) {
                 output[gid + i] = replacementKey[i];
