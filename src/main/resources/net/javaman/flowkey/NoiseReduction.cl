@@ -34,18 +34,12 @@ __kernel void noiseReductionKernel(
                 surroundingPixels += checkPixelEquality(input, gid + (width * 3), colorKey);
             }
             if (surroundingPixels < 3) {
-                for (int i = 0; i < 3; i++) {
-                    output[gid + i] = template[gid + i];
-                }
+                writePixel(output, gid, template, gid);
             } else {
-                for (int i = 0; i < 3; i++) {
-                    output[gid + i] = colorKey[i];
-                }
+                writePixel(output, gid, colorKey, 0);
             }
         } else {
-            for (int i = 0; i < 3; i++) {
-                output[gid + i] = template[gid + i];
-            }
+            writePixel(output, gid, template, gid);
         }
     }
 }

@@ -16,59 +16,41 @@ __kernel void flowKeyKernel(
         if (checkPixelEquality(input, gid, colorKey) == 0) {
             if (
                 (gid / 3) % width != 0 &&
-                checkPixelEquality(input, gid - 3, colorKey) == 1
+                checkPixelEquality(input, gid - 3, colorKey) == 1 &&
+                calcColorDiff(input, gid, template, gid - 3, colorSpace) > gradientTolerance
             ) {
-                float colorDiff = calcColorDiff(input, gid, template, gid - 3, colorSpace);
-                if (colorDiff < gradientTolerance) {
-                    for (int i = 0; i < 3; i++) {
-                        output[gid + i] = colorKey[i];
-                    }
-                    return;
-                }
+                writePixel(output, gid, colorKey, 0);
+                return;
             }
             if (
                 (gid / 3) % width != width - 1 &&
-                checkPixelEquality(input, gid + 3, colorKey) == 1
+                checkPixelEquality(input, gid + 3, colorKey) == 1 &&
+                calcColorDiff(input, gid, template, gid + 3, colorSpace) > gradientTolerance
             ) {
-                float colorDiff = calcColorDiff(input, gid, template, gid + 3, colorSpace);
-                if (colorDiff < gradientTolerance) {
-                    for (int i = 0; i < 3; i++) {
-                        output[gid + i] = colorKey[i];
-                    }
-                    return;
-                }
+                writePixel(output, gid, colorKey, 0);
+                return;
             }
             if (
                 (gid / 3) / width != 0 &&
-                checkPixelEquality(input, gid - (width * 3), colorKey) == 1
+                checkPixelEquality(input, gid - (width * 3), colorKey) == 1 && 
+                calcColorDiff(input, gid, template, gid - (width * 3), colorSpace) > gradientTolerance
             ) {
-                float colorDiff = calcColorDiff(input, gid, template, gid - (width * 3), colorSpace);
-                if (colorDiff < gradientTolerance) {
-                    for (int i = 0; i < 3; i++) {
-                        output[gid + i] = colorKey[i];
-                    }
-                    return;
-                }
+                writePixel(output, gid, colorKey, 0);
+                return;
             }
             if (
                 (gid / 3) / width != height - 1 &&
-                checkPixelEquality(input, gid + (width * 3), colorKey) == 1
+                checkPixelEquality(input, gid + (width * 3), colorKey) == 1 &&
+                calcColorDiff(input, gid, template, gid + (width * 3), colorSpace) > gradientTolerance
             ) {
-                float colorDiff = calcColorDiff(input, gid, template, gid + (width * 3), colorSpace);
-                if (colorDiff < gradientTolerance) {
-                    for (int i = 0; i < 3; i++) {
-                        output[gid + i] = colorKey[i];
-                    }
-                    return;
-                }
+                writePixel(output, gid, colorKey, 0);
+                return;
             }
-            for (int i = 0; i < 3; i++) {
-                output[gid + i] = template[gid + i];
-            }
+            writePixel(output, gid, template, gid);
         } else {
-            for (int i = 0; i < 3; i++) {
-                output[gid + i] = colorKey[i];
-            }
+            writePixel(output, gid, colorKey, 0);
         }
+    } else {
+        writePixel(output, gid, colorKey, 0);
     }
 }

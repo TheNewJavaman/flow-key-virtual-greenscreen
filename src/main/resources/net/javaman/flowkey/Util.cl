@@ -53,3 +53,14 @@ float calcColorDiff(
         return percentDiff;
     }
 }
+
+void writePixel(
+    char *canvas,
+    const int i,
+    const char *ink,
+    const int j
+) {
+    for (int k = 0; k < 3; k++) {
+        canvas[i + k] = ink[j + k];
+    }
+}

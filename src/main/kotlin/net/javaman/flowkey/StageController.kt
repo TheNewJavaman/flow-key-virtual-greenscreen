@@ -36,8 +36,8 @@ class StageController {
     }
 
     private fun onFrame(frame: Mat) {
-        val processedFrame = filter.apply(frame)
-        onFXThread(currentFrame.imageProperty(), SwingFXUtils.toFXImage(processedFrame, null))
+        val filteredFrame = filter.apply(frame)
+        onFXThread(currentFrame.imageProperty(), SwingFXUtils.toFXImage(filteredFrame, null))
     }
 
     fun setClosed() {

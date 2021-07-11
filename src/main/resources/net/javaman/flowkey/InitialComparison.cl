@@ -13,13 +13,9 @@ __kernel void initialComparisonKernel(
     if (gid % 3 == 0) {
         float percentDiff = calcColorDiff(input, gid, colorKey, 0, colorSpace);
         if (percentDiff < percentTolerance) {
-            for (int i = 0; i < 3; i++) {
-                output[gid + i] = replacementKey[i];
-            }
+            writePixel(output, gid, replacementKey, 0);
         } else {
-            for (int i = 0; i < 3; i++) {
-                output[gid + i] = input[gid + i];
-            }
+            writePixel(output, gid, input, gid);
         }
     }
 }

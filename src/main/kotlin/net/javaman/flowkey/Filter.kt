@@ -3,28 +3,27 @@
 
 package net.javaman.flowkey
 
-import net.javaman.flowkey.Camera.Companion.COLOR_DEPTH
-import net.javaman.flowkey.Camera.Companion.DEFAULT_HEIGHT_PIXELS
-import net.javaman.flowkey.Camera.Companion.DEFAULT_WIDTH_PIXELS
 import org.jocl.*
 import org.jocl.CL.*
 import org.opencv.core.Mat
 import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
+import kotlin.math.ceil
 
 class Filter constructor(
-    private val percentTolerance: Float = 0.03f,
-    private val gradientTolerance: Float = 1.0f,
-    private val colorKey: ByteArray = byteArrayOf(146.toByte(), 163.toByte(), 160.toByte()),
+    private val percentTolerance: Float = 0.01f,
+    private val gradientTolerance: Float = 0.03f,
+    private val colorKey: ByteArray = byteArrayOf(0, 0, 0),
     private val replacementKey: ByteArray = byteArrayOf(255.toByte(), 255.toByte(), 0),
     private val colorSpace: ColorSpace = ColorSpace.ALL,
-    private val noiseReduction: Int = 3,
-    private val flowDepth: Int = 10,
+    private val noiseReduction: Int = 10,
+    private val flowDepth: Int = 1,
     private val width: Int = DEFAULT_WIDTH_PIXELS,
     private val height: Int = DEFAULT_HEIGHT_PIXELS,
     platformIndex: Int = 0,
     deviceType: Long = CL_DEVICE_TYPE_ALL,
-    deviceIndex: Int = 0
+    deviceIndex: Int = 0,
+    private val localWorkSize: Long? = null
 ) {
     companion object {
         @Suppress("Unused")
@@ -50,7 +49,8 @@ class Filter constructor(
 
         enum class ClMemOperation(val flags: Long) {
             READ(CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR),
-            WRITE(CL_MEM_READ_WRITE)
+            //READ(CL_MEM_READ_ONLY or CL_MEM_USE_HOST_PTR),
+            WRITE(CL_MEM_WRITE_ONLY)
         }
     }
 
@@ -142,7 +142,7 @@ class Filter constructor(
         val size = inputBuffer.size
         val outputBuffer = ByteArray(size = size)
         val floatOptionsBuffer = floatArrayOf(percentTolerance)
-        val intOptionsBuffer = intArrayOf(colorSpace.i)
+        val intOptionsBuffer = intArrayOf(colorSpace.i, width, height)
 
         val inputPtr = Pointer.to(inputBuffer)
         val outputPtr = Pointer.to(outputBuffer)
@@ -166,15 +166,17 @@ class Filter constructor(
         clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(replacementKeyMem))
         clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(floatOptionsMem))
         clSetKernelArg(kernel, a, Sizeof.cl_mem.toLong(), Pointer.to(intOptionsMem))
-        val globalWorkSize = longArrayOf(size.toLong())
+        val globalWorkSizeBuffer = localWorkSize?.let { longArrayOf(ceil(size / it.toFloat()).toLong() * it) }
+            ?: longArrayOf(size.toLong())
+        val localWorkSizeBuffer = localWorkSize?.let { longArrayOf(localWorkSize) }
 
         clEnqueueNDRangeKernel(
             commandQueue,
             kernel,
             1,
             null,
-            globalWorkSize,
-            null,
+            globalWorkSizeBuffer,
+            localWorkSizeBuffer,
             0,
             null,
             null
@@ -238,15 +240,17 @@ class Filter constructor(
         clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(templateMem))
         clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(colorKeyMem))
         clSetKernelArg(kernel, a, Sizeof.cl_mem.toLong(), Pointer.to(intOptionsMem))
-        val globalWorkSize = longArrayOf(size.toLong())
+        val globalWorkSizeBuffer = localWorkSize?.let { longArrayOf(ceil(size / it.toFloat()).toLong() * it) }
+            ?: longArrayOf(size.toLong())
+        val localWorkSizeBuffer = localWorkSize?.let { longArrayOf(localWorkSize) }
 
         clEnqueueNDRangeKernel(
             commandQueue,
             kernel,
             1,
             null,
-            globalWorkSize,
-            null,
+            globalWorkSizeBuffer,
+            localWorkSizeBuffer,
             0,
             null,
             null
@@ -313,15 +317,17 @@ class Filter constructor(
         clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(colorKeyMem))
         clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(floatOptionsMem))
         clSetKernelArg(kernel, a, Sizeof.cl_mem.toLong(), Pointer.to(intOptionsMem))
-        val globalWorkSize = longArrayOf(size.toLong())
+        val globalWorkSizeBuffer = localWorkSize?.let { longArrayOf(ceil(size / it.toFloat()).toLong() * it) }
+            ?: longArrayOf(size.toLong())
+        val localWorkSizeBuffer = localWorkSize?.let { longArrayOf(localWorkSize) }
 
         clEnqueueNDRangeKernel(
             commandQueue,
             kernel,
             1,
             null,
-            globalWorkSize,
-            null,
+            globalWorkSizeBuffer,
+            localWorkSizeBuffer,
             0,
             null,
             null
