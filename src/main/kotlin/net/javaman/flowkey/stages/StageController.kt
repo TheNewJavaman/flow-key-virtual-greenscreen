@@ -1,6 +1,6 @@
 // Adapted from https://opencv-java-tutorials.readthedocs.io/en/latest/_images/03-08.png
 
-package net.javaman.flowkey
+package net.javaman.flowkey.stages
 
 import javafx.application.Platform
 import javafx.beans.property.ObjectProperty
@@ -9,6 +9,8 @@ import javafx.event.ActionEvent
 import javafx.fxml.FXML
 import javafx.scene.control.Button
 import javafx.scene.image.ImageView
+import net.javaman.flowkey.filters.OpenClFilter
+import net.javaman.flowkey.util.Camera
 import org.opencv.core.Mat
 
 class StageController {
@@ -20,7 +22,7 @@ class StageController {
 
     private lateinit var camera: Camera
 
-    private val filter = Filter()
+    private val filter = OpenClFilter()
 
     @FXML
     fun startCamera(

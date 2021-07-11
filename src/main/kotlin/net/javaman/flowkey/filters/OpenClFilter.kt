@@ -1,8 +1,13 @@
 // Adapted from https://github.com/gpu/JOCLSamples/blob/master/src/main/java/org/jocl/samples/JOCLSample.java
 //              http://jocl.org/samples/JOCLDeviceQuery.java
 
-package net.javaman.flowkey
+package net.javaman.flowkey.filters
 
+import net.javaman.flowkey.filters.Filter.Companion.ColorSpace
+import net.javaman.flowkey.logger
+import net.javaman.flowkey.util.COLOR_DEPTH
+import net.javaman.flowkey.util.DEFAULT_HEIGHT_PIXELS
+import net.javaman.flowkey.util.DEFAULT_WIDTH_PIXELS
 import org.jocl.*
 import org.jocl.CL.*
 import org.opencv.core.Mat
@@ -10,7 +15,8 @@ import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
 import kotlin.math.ceil
 
-class Filter constructor(
+@Suppress("Unused")
+class OpenClFilter constructor(
     private val percentTolerance: Float = 0.01f,
     private val gradientTolerance: Float = 0.03f,
     private val colorKey: ByteArray = byteArrayOf(0, 0, 0),
@@ -24,33 +30,12 @@ class Filter constructor(
     deviceType: Long = CL_DEVICE_TYPE_ALL,
     deviceIndex: Int = 0,
     private val localWorkSize: Long? = null
-) {
+) : Filter {
     companion object {
-        @Suppress("Unused")
-        enum class ColorSpace(val i: Int) {
-            BLUE(0),
-            RED(1),
-            GREEN(2),
-            ALL(3)
-        }
-
-        @Suppress("Unused")
-        enum class FloatOption(val i: Int) {
-            PERCENT_TOLERANCE(0),
-            GRADIENT_TOLERANCE(1)
-        }
-
-        @Suppress("Unused")
-        enum class IntOption(val i: Int) {
-            COLOR_SPACE(0),
-            WIDTH(1),
-            HEIGHT(2)
-        }
-
         enum class ClMemOperation(val flags: Long) {
-            READ(CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR),
+            READ(CL.CL_MEM_READ_ONLY or CL.CL_MEM_COPY_HOST_PTR),
             //READ(CL_MEM_READ_ONLY or CL_MEM_USE_HOST_PTR),
-            WRITE(CL_MEM_WRITE_ONLY)
+            WRITE(CL.CL_MEM_WRITE_ONLY)
         }
     }
 
@@ -91,10 +76,10 @@ class Filter constructor(
         val properties = cl_queue_properties()
         commandQueue = clCreateCommandQueueWithProperties(context, device, properties, null)
 
-        val utilSource = this::class.java.getResource("Util.cl")!!.readText()
-        val initialComparisonSource = this::class.java.getResource("InitialComparison.cl")!!.readText()
-        val noiseReductionSource = this::class.java.getResource("NoiseReduction.cl")!!.readText()
-        val flowKeySource = this::class.java.getResource("FlowKey.cl")!!.readText()
+        val utilSource = this::class.java.getResource("../opencl/Util.cl")!!.readText()
+        val initialComparisonSource = this::class.java.getResource("../opencl/InitialComparison.cl")!!.readText()
+        val noiseReductionSource = this::class.java.getResource("../opencl/NoiseReduction.cl")!!.readText()
+        val flowKeySource = this::class.java.getResource("../opencl/FlowKey.cl")!!.readText()
         val sources = arrayOf(utilSource, initialComparisonSource, noiseReductionSource, flowKeySource)
         program = clCreateProgramWithSource(
             context,
