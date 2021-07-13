@@ -13,7 +13,8 @@ enum FloatOptions {
 enum IntOptions {
     COLOR_SPACE = 0,
     WIDTH = 1,
-    HEIGHT = 2
+    HEIGHT = 2,
+    BLOCK_SIZE = 3
 };
 
 int checkPixelEquality(
@@ -63,4 +64,25 @@ void writePixel(
     for (int k = 0; k < 3; k++) {
         canvas[i + k] = ink[j + k];
     }
+}
+
+float avgBlock(
+    const unsigned char *canvas,
+    const int canvasWidth,
+    const int canvasHeight,
+    const int blockSize,
+    const int blockX,
+    const int blockY
+) {
+    int blockSum = 0;
+    int pixelCount = 0;
+    for (int row = blockSize * blockY; row < blockY * blockSize + blockSize && row < canvasHeight; row++) {
+        for (int col = blockSize * blockX; col < blockX * blockSize + blockSize && col < canvasWidth; col++) {
+            for (int i = 0; i < 3; i++) {
+                blockSum += canvas[(canvasWidth * row + col) * 3 + i];
+            }
+            pixelCount += 1;
+        }
+    }
+    return (float) blockSum / pixelCount / 3.0;
 }

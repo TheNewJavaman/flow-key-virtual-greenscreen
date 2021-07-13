@@ -2,6 +2,14 @@
 
 Intelligent greenscreen software that adapts to uneven lighting
 
+## Notes
+
+- Cuda support is not fully implemented; OpenCL is the priority for cross-platform support
+- Virtual camera support is fully implemented
+- GUI support for changing settings is not implemented
+- Breaking up the pictures into blocks (so not working on a pixel-by-pixel basis) is only implemented for the `Splash` and `SplashPrep` filters
+- I'm just going to keep rewriting this software until it's performant and easy to use. Fun!
+
 ## General Flow
 
 Flow Key reads image data from a real device, applies a filter to the image, and then sends the modified frame to a
@@ -19,11 +27,10 @@ green color.
 
 ## Filter Flow
 
-The filter works by first comparing pixels to a certain preselected color key, then moving outward from each valid pixel
-and comparing adjacent pixels to the previous pixel. This "flow" outward from the original pixels is where this
-application gets its name.
+There are several implemented filters:
 
-1. Search image for pixels matching a preselected color key
-2. For each matching pixel, search the surrounding pixels for slightly different, but still matching, colors
-   1. Repeat until no changes occur
-3. Replace all the matching pixels with a static color
+- `InitialComparison`: Generic greenscreen filter; checks if pixels are close to a specified color key, then writes a replacement color to those pixels
+- `NoiseReduction`: Identifies greenscreen pixels that aren't surrounded by many other greenscreen pixels, then writes the original color to those pixels
+- `FlowKey`: Identifies pixels that are close to greenscreen pixels, then writes a replacement color to those pixels if they are close
+- `Splash`: Compares an original image to a new image, then replaces stale pixels with a replacement color
+- `SplashPrep`: Generates a block map of average pixel values

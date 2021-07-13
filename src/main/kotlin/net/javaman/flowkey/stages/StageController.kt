@@ -9,8 +9,11 @@ import javafx.event.ActionEvent
 import javafx.fxml.FXML
 import javafx.scene.control.Button
 import javafx.scene.image.ImageView
+import javafx.scene.layout.Pane
 import net.javaman.flowkey.filters.OpenClFilter
 import net.javaman.flowkey.util.Camera
+import net.javaman.flowkey.util.toBufferedImage
+import net.javaman.flowkey.util.toByteArray
 import org.opencv.core.Mat
 
 class StageController {
@@ -18,11 +21,22 @@ class StageController {
     private lateinit var startCameraButton: Button
 
     @FXML
-    lateinit var currentFrame: ImageView
+    lateinit var originalPane: Pane
+
+    @FXML
+    lateinit var originalFrame: ImageView
+
+    @FXML
+    lateinit var modifiedPane: Pane
+
+    @FXML
+    lateinit var modifiedFrame: ImageView
 
     private lateinit var camera: Camera
 
     private val filter = OpenClFilter()
+
+    private var initialBlockAvg: FloatArray? = null
 
     @FXML
     fun startCamera(
@@ -38,8 +52,17 @@ class StageController {
     }
 
     private fun onFrame(frame: Mat) {
-        val filteredFrame = filter.apply(frame)
-        onFXThread(currentFrame.imageProperty(), SwingFXUtils.toFXImage(filteredFrame, null))
+        val originalFrameData = frame.toByteArray()
+        if (initialBlockAvg == null) {
+            initialBlockAvg = filter.applySplashPrep(originalFrameData)
+        }
+        val originalImage = originalFrameData.toBufferedImage(camera.maxWidth, camera.maxHeight)
+        onFXThread(originalFrame.imageProperty(), SwingFXUtils.toFXImage(originalImage, null))
+        filter.applySplash(originalFrameData, initialBlockAvg!!).run {
+            val modifiedImage = this.first.toBufferedImage(camera.maxWidth, camera.maxHeight)
+            onFXThread(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
+            initialBlockAvg = this.second
+        }
     }
 
     fun setClosed() {

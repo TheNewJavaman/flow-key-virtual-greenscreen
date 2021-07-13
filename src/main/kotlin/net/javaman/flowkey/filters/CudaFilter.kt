@@ -1,15 +1,16 @@
+// Adapted from https://github.com/jcuda/jcuda-samples/blob/master/JCudaSamples/src/main/java/jcuda/driver/samples/JCudaVectorAdd.java
+
 package net.javaman.flowkey.filters
 
-import jcuda.driver.CUcontext
-import jcuda.driver.CUdevice
-import jcuda.driver.CUmodule
+import jcuda.Pointer
+import jcuda.Sizeof
+import jcuda.driver.*
 import jcuda.driver.JCudaDriver.*
 import net.javaman.flowkey.util.COLOR_DEPTH
 import net.javaman.flowkey.util.DEFAULT_HEIGHT_PIXELS
 import net.javaman.flowkey.util.DEFAULT_WIDTH_PIXELS
-import org.opencv.core.Mat
-import java.awt.image.BufferedImage
-import java.awt.image.DataBufferByte
+import kotlin.math.ceil
+
 
 class CudaFilter constructor(
     private val percentTolerance: Float = 0.01f,
@@ -21,6 +22,7 @@ class CudaFilter constructor(
     private val flowDepth: Int = 1,
     private val width: Int = DEFAULT_WIDTH_PIXELS,
     private val height: Int = DEFAULT_HEIGHT_PIXELS,
+    private val blockSize: Int = 256
 ) {
     companion object {
         @Suppress("Unused")
@@ -45,35 +47,77 @@ class CudaFilter constructor(
         }
     }
 
+    private var initialComparisonProgram: CUfunction
+
+    private var noiseReductionProgram: CUfunction
+
+    private var flowKeyProgram: CUfunction
+
     init {
         setExceptionsEnabled(true)
+
         cuInit(0)
         val device = CUdevice()
         cuDeviceGet(device, 0)
+
         val context = CUcontext()
         cuCtxCreate(context, 0, device)
+
         val module = CUmodule()
-        cuModuleLoad(module, "")
+        cuModuleLoad(module, "ptx_out/Source.ptx")
+
+        initialComparisonProgram = CUfunction()
+        cuModuleGetFunction(initialComparisonProgram, module, "initialComparisonKernel")
+        noiseReductionProgram = CUfunction()
+        cuModuleGetFunction(noiseReductionProgram, module, "noiseReductionKernel")
+        flowKeyProgram = CUfunction()
+        cuModuleGetFunction(flowKeyProgram, module, "flowKeyKernel")
     }
 
-    fun apply(input: Mat): BufferedImage {
-        val size = input.cols() * input.rows() * COLOR_DEPTH
-        val originalImage = ByteArray(size = size)
-        input.get(0, 0, originalImage)
-
+    fun apply(originalImage: ByteArray): ByteArray {
         val initialComparisonOutput = applyInitialComparison(originalImage)
         val noiseReduction1Output = applyNoiseReductionHandler(initialComparisonOutput, originalImage)
         val flowKeyOutput = applyFlowKeyHandler(noiseReduction1Output, originalImage)
-        val noiseReduction2Output = applyNoiseReductionHandler(flowKeyOutput, originalImage)
-
-        val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
-        val targetPixels = (bufferedImage.raster.dataBuffer as DataBufferByte).data
-        System.arraycopy(noiseReduction2Output, 0, targetPixels, 0, size)
-        return bufferedImage
+        return applyNoiseReductionHandler(flowKeyOutput, originalImage)
     }
 
     private fun applyInitialComparison(inputBuffer: ByteArray): ByteArray {
-        return inputBuffer
+        val size = inputBuffer.size
+
+        val inputPtr = allocMem(Sizeof.CHAR * size.toLong(), Pointer.to(inputBuffer))
+        val outputPtr = allocMem(Sizeof.CHAR * size.toLong())
+        val colorKeyPtr = allocMem(Sizeof.CHAR * COLOR_DEPTH.toLong(), Pointer.to(colorKey))
+        val replacementKeyPtr = allocMem(Sizeof.CHAR * COLOR_DEPTH.toLong(), Pointer.to(replacementKey))
+
+        val kernelParams = Pointer.to(
+            Pointer.to(intArrayOf(size)),
+            Pointer.to(inputPtr),
+            Pointer.to(outputPtr),
+            Pointer.to(colorKeyPtr),
+            Pointer.to(replacementKeyPtr),
+            Pointer.to(floatArrayOf(percentTolerance)),
+            Pointer.to(intArrayOf(colorSpace.i))
+        )
+
+        val gridSize = ceil(size / blockSize.toDouble()).toInt()
+        cuLaunchKernel(
+            initialComparisonProgram,
+            gridSize, 1, 1,
+            blockSize, 1, 1,
+            0, null,
+            kernelParams, null
+        )
+        cuCtxSynchronize()
+
+        val hostOutput = ByteArray(size = size)
+        cuMemcpyDtoH(Pointer.to(hostOutput), outputPtr, Sizeof.FLOAT * size.toLong())
+
+        cuMemFree(inputPtr)
+        cuMemFree(outputPtr)
+        cuMemFree(colorKeyPtr)
+        cuMemFree(replacementKeyPtr)
+
+        return hostOutput
     }
 
     private fun applyNoiseReductionHandler(
@@ -89,7 +133,42 @@ class CudaFilter constructor(
     }
 
     private fun applyNoiseReduction(inputBuffer: ByteArray, templateBuffer: ByteArray): ByteArray {
-        return inputBuffer
+        val size = inputBuffer.size
+
+        val inputPtr = allocMem(Sizeof.CHAR * size.toLong(), Pointer.to(inputBuffer))
+        val outputPtr = allocMem(Sizeof.CHAR * size.toLong())
+        val templatePtr = allocMem(Sizeof.CHAR * size.toLong(), Pointer.to(templateBuffer))
+        val colorKeyPtr = allocMem(Sizeof.CHAR * COLOR_DEPTH.toLong(), Pointer.to(replacementKey))
+
+        val kernelParams = Pointer.to(
+            Pointer.to(intArrayOf(size)),
+            Pointer.to(inputPtr),
+            Pointer.to(outputPtr),
+            Pointer.to(templatePtr),
+            Pointer.to(colorKeyPtr),
+            Pointer.to(intArrayOf(width)),
+            Pointer.to(intArrayOf(height))
+        )
+
+        val gridSize = ceil(size / blockSize.toDouble()).toInt()
+        cuLaunchKernel(
+            noiseReductionProgram,
+            gridSize, 1, 1,
+            blockSize, 1, 1,
+            0, null,
+            kernelParams, null
+        )
+        cuCtxSynchronize()
+
+        val hostOutput = ByteArray(size = size)
+        cuMemcpyDtoH(Pointer.to(hostOutput), outputPtr, Sizeof.FLOAT * size.toLong())
+
+        cuMemFree(inputPtr)
+        cuMemFree(outputPtr)
+        cuMemFree(templatePtr)
+        cuMemFree(colorKeyPtr)
+
+        return hostOutput
     }
 
     private fun applyFlowKeyHandler(
@@ -105,10 +184,52 @@ class CudaFilter constructor(
     }
 
     private fun applyFlowKey(inputBuffer: ByteArray, templateBuffer: ByteArray): ByteArray {
-        return inputBuffer
+        val size = inputBuffer.size
+
+        val inputPtr = allocMem(Sizeof.CHAR * size.toLong(), Pointer.to(inputBuffer))
+        val outputPtr = allocMem(Sizeof.CHAR * size.toLong())
+        val templatePtr = allocMem(Sizeof.CHAR * size.toLong(), Pointer.to(templateBuffer))
+        val colorKeyPtr = allocMem(Sizeof.CHAR * COLOR_DEPTH.toLong(), Pointer.to(replacementKey))
+
+        val kernelParams = Pointer.to(
+            Pointer.to(intArrayOf(size)),
+            Pointer.to(inputPtr),
+            Pointer.to(outputPtr),
+            Pointer.to(templatePtr),
+            Pointer.to(colorKeyPtr),
+            Pointer.to(floatArrayOf(gradientTolerance)),
+            Pointer.to(intArrayOf(colorSpace.i)),
+            Pointer.to(intArrayOf(width)),
+            Pointer.to(intArrayOf(height))
+        )
+
+        val gridSize = ceil(size / blockSize.toDouble()).toInt()
+        cuLaunchKernel(
+            flowKeyProgram,
+            gridSize, 1, 1,
+            blockSize, 1, 1,
+            0, null,
+            kernelParams, null
+        )
+        cuCtxSynchronize()
+
+        val hostOutput = ByteArray(size = size)
+        cuMemcpyDtoH(Pointer.to(hostOutput), outputPtr, Sizeof.FLOAT * size.toLong())
+
+        cuMemFree(inputPtr)
+        cuMemFree(outputPtr)
+        cuMemFree(templatePtr)
+        cuMemFree(colorKeyPtr)
+
+        return hostOutput
     }
 
-    fun close() {
-
+    private fun allocMem(size: Long, hostPtr: Pointer? = null): CUdeviceptr {
+        val devicePtr = CUdeviceptr()
+        cuMemAlloc(devicePtr, size);
+        hostPtr?.let {
+            cuMemcpyHtoD(devicePtr, Pointer.to(hostPtr), size);
+        }
+        return devicePtr
     }
 }

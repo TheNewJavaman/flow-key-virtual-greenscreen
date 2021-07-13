@@ -20,7 +20,8 @@ interface Filter {
         enum class IntOption(val i: Int) {
             COLOR_SPACE(0),
             WIDTH(1),
-            HEIGHT(2)
+            HEIGHT(2),
+            BLOCK_SIZE(3)
         }
     }
 }

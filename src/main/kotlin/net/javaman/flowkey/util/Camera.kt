@@ -1,5 +1,6 @@
 package net.javaman.flowkey.util
 
+import com.github.sarxos.webcam.Webcam
 import net.javaman.flowkey.logger
 import org.opencv.core.Mat
 import org.opencv.videoio.VideoCapture
@@ -12,10 +13,14 @@ class Camera constructor(
     private val onCameraStop: () -> Unit,
     framesPerSecond: Long = 30L,
     private val cameraId: Int = 0,
-    private val maxWidth: Int = DEFAULT_WIDTH_PIXELS,
-    private val maxHeight: Int = DEFAULT_HEIGHT_PIXELS,
+    val maxWidth: Int = DEFAULT_WIDTH_PIXELS,
+    val maxHeight: Int = DEFAULT_HEIGHT_PIXELS,
     private val threads: Int = 2
 ) {
+    companion object {
+        fun getDevices() = Webcam.getWebcams()
+    }
+
     private var timer: ScheduledExecutorService? = null
 
     private val capture = VideoCapture()

@@ -10,32 +10,31 @@ import net.javaman.flowkey.util.DEFAULT_HEIGHT_PIXELS
 import net.javaman.flowkey.util.DEFAULT_WIDTH_PIXELS
 import org.jocl.*
 import org.jocl.CL.*
-import org.opencv.core.Mat
-import java.awt.image.BufferedImage
-import java.awt.image.DataBufferByte
 import kotlin.math.ceil
 
 @Suppress("Unused")
 class OpenClFilter constructor(
-    private val percentTolerance: Float = 0.01f,
+    private val percentTolerance: Float = 0.025f,
     private val gradientTolerance: Float = 0.03f,
-    private val colorKey: ByteArray = byteArrayOf(0, 0, 0),
+    private val colorKey: ByteArray = byteArrayOf(28, 56, 75),
     private val replacementKey: ByteArray = byteArrayOf(255.toByte(), 255.toByte(), 0),
     private val colorSpace: ColorSpace = ColorSpace.ALL,
-    private val noiseReduction: Int = 10,
+    private val noiseReduction: Int = 1,
     private val flowDepth: Int = 1,
     private val width: Int = DEFAULT_WIDTH_PIXELS,
     private val height: Int = DEFAULT_HEIGHT_PIXELS,
     platformIndex: Int = 0,
     deviceType: Long = CL_DEVICE_TYPE_ALL,
     deviceIndex: Int = 0,
-    private val localWorkSize: Long? = null
+    private val localWorkSize: Long? = null,
+    private val blockSize: Int = 1
 ) : Filter {
     companion object {
         enum class ClMemOperation(val flags: Long) {
-            READ(CL.CL_MEM_READ_ONLY or CL.CL_MEM_COPY_HOST_PTR),
+            READ(CL_MEM_READ_ONLY or CL_MEM_COPY_HOST_PTR),
+
             //READ(CL_MEM_READ_ONLY or CL_MEM_USE_HOST_PTR),
-            WRITE(CL.CL_MEM_WRITE_ONLY)
+            WRITE(CL_MEM_WRITE_ONLY)
         }
     }
 
@@ -80,7 +79,16 @@ class OpenClFilter constructor(
         val initialComparisonSource = this::class.java.getResource("../opencl/InitialComparison.cl")!!.readText()
         val noiseReductionSource = this::class.java.getResource("../opencl/NoiseReduction.cl")!!.readText()
         val flowKeySource = this::class.java.getResource("../opencl/FlowKey.cl")!!.readText()
-        val sources = arrayOf(utilSource, initialComparisonSource, noiseReductionSource, flowKeySource)
+        val splashSource = this::class.java.getResource("../opencl/Splash.cl")!!.readText()
+        val splashPrepSource = this::class.java.getResource("../opencl/SplashPrep.cl")!!.readText()
+        val sources = arrayOf(
+            utilSource,
+            initialComparisonSource,
+            noiseReductionSource,
+            flowKeySource,
+            splashSource,
+            splashPrepSource
+        )
         program = clCreateProgramWithSource(
             context,
             sources.size,
@@ -107,20 +115,14 @@ class OpenClFilter constructor(
         return String(buffer, 0, buffer.size - 1)
     }
 
-    fun apply(input: Mat): BufferedImage {
-        val size = input.cols() * input.rows() * COLOR_DEPTH
-        val originalImage = ByteArray(size = size)
-        input.get(0, 0, originalImage)
-
-        val initialComparisonOutput = applyInitialComparison(originalImage)
+    fun apply(originalImage: ByteArray): ByteArray {
+        /*val initialComparisonOutput = applyInitialComparison(originalImage)
         val noiseReduction1Output = applyNoiseReductionHandler(initialComparisonOutput, originalImage)
         val flowKeyOutput = applyFlowKeyHandler(noiseReduction1Output, originalImage)
-        val noiseReduction2Output = applyNoiseReductionHandler(flowKeyOutput, originalImage)
-
-        val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
-        val targetPixels = (bufferedImage.raster.dataBuffer as DataBufferByte).data
-        System.arraycopy(noiseReduction2Output, 0, targetPixels, 0, size)
-        return bufferedImage
+        return applyNoiseReductionHandler(flowKeyOutput, originalImage)*/
+        //val prepOutput = applySplashPrep(originalImage)
+        //return applySplash(originalImage, prepOutput)
+        return originalImage
     }
 
     private fun applyInitialComparison(inputBuffer: ByteArray): ByteArray {
@@ -339,6 +341,153 @@ class OpenClFilter constructor(
 
         return outputBuffer
     }
+
+    fun applySplash(inputBuffer: ByteArray, inputBlockAverageBuffer: FloatArray): Pair<ByteArray, FloatArray> {
+        val size = inputBuffer.size
+        val outputBuffer = ByteArray(size = size)
+        val outputBlockAverageBuffer = FloatArray(size = inputBlockAverageBuffer.size)
+        val floatOptionsBuffer = floatArrayOf(percentTolerance)
+        val intOptionsBuffer = intArrayOf(0, width, height, blockSize)
+
+        val inputPtr = Pointer.to(inputBuffer)
+        val outputPtr = Pointer.to(outputBuffer)
+        val inputBlockAveragePtr = Pointer.to(inputBlockAverageBuffer)
+        val outputBlockAveragePtr = Pointer.to(outputBlockAverageBuffer)
+        val replacementKeyPtr = Pointer.to(replacementKey)
+        val floatOptionsPtr = Pointer.to(floatOptionsBuffer)
+        val intOptionsPtr = Pointer.to(intOptionsBuffer)
+
+        val inputMem = allocMem(inputPtr, ClMemOperation.READ, Sizeof.cl_char * size)
+        val outputMem = allocMem(null, ClMemOperation.WRITE, Sizeof.cl_char * size)
+        val inputBlockAverageMem = allocMem(inputBlockAveragePtr, ClMemOperation.READ, Sizeof.cl_float * inputBlockAverageBuffer.size)
+        val outputBlockAverageMem = allocMem(null, ClMemOperation.WRITE, Sizeof.cl_float * outputBlockAverageBuffer.size)
+        val replacementKeyMem = allocMem(replacementKeyPtr, ClMemOperation.READ, Sizeof.cl_char * COLOR_DEPTH)
+        val floatOptionsMem = allocMem(floatOptionsPtr, ClMemOperation.READ, Sizeof.cl_float * floatOptionsBuffer.size)
+        val intOptionsMem = allocMem(intOptionsPtr, ClMemOperation.READ, Sizeof.cl_int * intOptionsBuffer.size)
+
+        val kernel = clCreateKernel(program, "splashKernel", null)
+        var a = 0
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(inputMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(outputMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(inputBlockAverageMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(outputBlockAverageMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(replacementKeyMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(floatOptionsMem))
+        clSetKernelArg(kernel, a, Sizeof.cl_mem.toLong(), Pointer.to(intOptionsMem))
+        val globalWorkSizeBuffer = localWorkSize?.let { longArrayOf(ceil(size / it.toFloat()).toLong() * it) }
+            ?: longArrayOf(size.toLong())
+        val localWorkSizeBuffer = localWorkSize?.let { longArrayOf(localWorkSize) }
+
+        clEnqueueNDRangeKernel(
+            commandQueue,
+            kernel,
+            1,
+            null,
+            globalWorkSizeBuffer,
+            localWorkSizeBuffer,
+            0,
+            null,
+            null
+        )
+        clEnqueueReadBuffer(
+            commandQueue,
+            outputMem,
+            CL_TRUE,
+            0,
+            (Sizeof.cl_char * size).toLong(),
+            outputPtr,
+            0,
+            null,
+            null
+        )
+        clEnqueueReadBuffer(
+            commandQueue,
+            outputBlockAverageMem,
+            CL_TRUE,
+            0,
+            (Sizeof.cl_float * outputBlockAverageBuffer.size).toLong(),
+            outputBlockAveragePtr,
+            0,
+            null,
+            null
+        )
+
+        clReleaseMemObject(inputMem)
+        clReleaseMemObject(outputMem)
+        clReleaseMemObject(inputBlockAverageMem)
+        clReleaseMemObject(outputBlockAverageMem)
+        clReleaseMemObject(replacementKeyMem)
+        clReleaseMemObject(floatOptionsMem)
+        clReleaseMemObject(intOptionsMem)
+        clReleaseKernel(kernel)
+
+        return Pair(outputBuffer, outputBlockAverageBuffer)
+    }
+
+    fun applySplashPrep(inputBuffer: ByteArray): FloatArray {
+        val size = inputBuffer.size
+        val blocksPerRow = if (width % blockSize == 0) {
+            width / blockSize
+        } else {
+            width / blockSize + 1
+        }
+        val blocksPerColumn = if (height % blockSize == 0) {
+            height / blockSize
+        } else {
+            height / blockSize + 1
+        }
+        println("blocks per row: $blocksPerRow; blocks per column: $blocksPerColumn")
+        val outputBuffer = FloatArray(size = blocksPerRow * blocksPerColumn)
+        val intOptionsBuffer = intArrayOf(0, width, height, blockSize)
+
+        val inputPtr = Pointer.to(inputBuffer)
+        val outputPtr = Pointer.to(outputBuffer)
+        val intOptionsPtr = Pointer.to(intOptionsBuffer)
+
+        val inputMem = allocMem(inputPtr, ClMemOperation.READ, Sizeof.cl_char * size)
+        val outputMem = allocMem(null, ClMemOperation.WRITE, Sizeof.cl_float * blocksPerRow * blocksPerColumn)
+        val intOptionsMem = allocMem(intOptionsPtr, ClMemOperation.READ, Sizeof.cl_int * intOptionsBuffer.size)
+
+        val kernel = clCreateKernel(program, "splashPrepKernel", null)
+        var a = 0
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(inputMem))
+        clSetKernelArg(kernel, a++, Sizeof.cl_mem.toLong(), Pointer.to(outputMem))
+        clSetKernelArg(kernel, a, Sizeof.cl_mem.toLong(), Pointer.to(intOptionsMem))
+        val globalWorkSizeBuffer = localWorkSize?.let { longArrayOf(ceil(size / it.toFloat()).toLong() * it) }
+            ?: longArrayOf(size.toLong())
+        val localWorkSizeBuffer = localWorkSize?.let { longArrayOf(localWorkSize) }
+
+        clEnqueueNDRangeKernel(
+            commandQueue,
+            kernel,
+            1,
+            null,
+            globalWorkSizeBuffer,
+            localWorkSizeBuffer,
+            0,
+            null,
+            null
+        )
+        clEnqueueReadBuffer(
+            commandQueue,
+            outputMem,
+            CL_TRUE,
+            0,
+            (Sizeof.cl_float * blocksPerRow * blocksPerColumn).toLong(),
+            outputPtr,
+            0,
+            null,
+            null
+        )
+
+        clReleaseMemObject(inputMem)
+        clReleaseMemObject(outputMem)
+        clReleaseMemObject(intOptionsMem)
+        clReleaseKernel(kernel)
+
+        return outputBuffer
+    }
+
 
     private fun allocMem(ptr: Pointer?, op: ClMemOperation, size: Int) = clCreateBuffer(
         context,
