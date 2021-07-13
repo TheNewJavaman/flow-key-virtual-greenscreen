@@ -34,3 +34,11 @@ There are several implemented filters:
 - `FlowKey`: Identifies pixels that are close to greenscreen pixels, then writes a replacement color to those pixels if they are close
 - `Splash`: Compares an original image to a new image, then replaces stale pixels with a replacement color
 - `SplashPrep`: Generates a block map of average pixel values
+
+morphological operations
+
+dilation (opening)
+
+erosion (closing)
+
+loop on GPU, not host

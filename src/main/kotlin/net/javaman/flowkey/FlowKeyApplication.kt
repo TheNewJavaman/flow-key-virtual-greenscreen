@@ -27,15 +27,22 @@ class FlowKeyApplication : Application() {
     override fun start(primaryStage: Stage) {
         val loader = FXMLLoader(FlowKeyApplication::class.java.getResource("stages/Stage.fxml"))
         rootElement = loader.load()
-        val scene = Scene(rootElement, 800.0, 600.0)
+        val scene = Scene(rootElement, 1280.0, 800.0)
         primaryStage.title = "Flow Key Virtual Greenscreen"
         primaryStage.scene = scene
         primaryStage.show()
         val controller: StageController = loader.getController()
-        controller.originalFrame.fitWidthProperty().bind(controller.originalPane.widthProperty())
-        controller.originalFrame.fitHeightProperty().bind(controller.originalPane.heightProperty())
-        controller.modifiedFrame.fitWidthProperty().bind(controller.modifiedPane.widthProperty())
-        controller.modifiedFrame.fitHeightProperty().bind(controller.modifiedPane.widthProperty())
+        controller.originalHBox.minWidthProperty().bind(controller.originalPane.widthProperty())
+        controller.originalHBox.minHeightProperty().bind(controller.originalPane.heightProperty())
+        controller.originalFrame.fitWidthProperty().bind(controller.originalHBox.widthProperty())
+        controller.originalFrame.fitHeightProperty().bind(controller.originalHBox.heightProperty())
+        controller.modifiedHBox.minWidthProperty().bind(controller.modifiedPane.widthProperty())
+        controller.modifiedHBox.minHeightProperty().bind(controller.modifiedPane.heightProperty())
+        controller.modifiedFrame.fitWidthProperty().bind(controller.modifiedHBox.widthProperty())
+        controller.modifiedFrame.fitHeightProperty().bind(controller.modifiedHBox.heightProperty())
+        controller.filtersHeader.minWidthProperty().bind(controller.filtersPane.widthProperty())
+        controller.filterPropertiesHeader.minWidthProperty().bind(controller.filterPropertiesPane.widthProperty())
+        controller.generalSettingsHeader.minWidthProperty().bind(controller.generalSettingsPane.widthProperty())
         primaryStage.onCloseRequest = EventHandler { controller.setClosed() }
     }
 }

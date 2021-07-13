@@ -8,9 +8,14 @@ import javafx.embed.swing.SwingFXUtils
 import javafx.event.ActionEvent
 import javafx.fxml.FXML
 import javafx.scene.control.Button
+import javafx.scene.control.TitledPane
 import javafx.scene.image.ImageView
+import javafx.scene.layout.GridPane
+import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
-import net.javaman.flowkey.filters.OpenClFilter
+import net.javaman.flowkey.hardwareapis.common.AbstractFilter
+import net.javaman.flowkey.hardwareapis.opencl.OpenClApi
+import net.javaman.flowkey.hardwareapis.opencl.SplashPrepFilter
 import net.javaman.flowkey.util.Camera
 import net.javaman.flowkey.util.toBufferedImage
 import net.javaman.flowkey.util.toByteArray
@@ -18,10 +23,10 @@ import org.opencv.core.Mat
 
 class StageController {
     @FXML
-    private lateinit var startCameraButton: Button
+    lateinit var originalPane: Pane
 
     @FXML
-    lateinit var originalPane: Pane
+    lateinit var originalHBox: HBox
 
     @FXML
     lateinit var originalFrame: ImageView
@@ -30,45 +35,83 @@ class StageController {
     lateinit var modifiedPane: Pane
 
     @FXML
+    lateinit var modifiedHBox: HBox
+
+    @FXML
     lateinit var modifiedFrame: ImageView
 
-    private lateinit var camera: Camera
+    @FXML
+    lateinit var filtersPane: TitledPane
 
-    private val filter = OpenClFilter()
+    @FXML
+    lateinit var filtersHeader: GridPane
+
+    @FXML
+    lateinit var filterAdd: Button
+
+    @FXML
+    lateinit var filterDelete: Button
+
+    @FXML
+    lateinit var filterPropertiesPane: TitledPane
+
+    @FXML
+    lateinit var filterPropertiesHeader: GridPane
+
+    @FXML
+    lateinit var generalSettingsPane: TitledPane
+
+    @FXML
+    lateinit var generalSettingsHeader: GridPane
+
+    @FXML
+    lateinit var playButton: Button
+
+    @FXML
+    lateinit var refreshButton: Button
+
+    private var camera: Camera? = null
+
+    private val api = OpenClApi()
 
     private var initialBlockAvg: FloatArray? = null
 
+    private val filters: MutableList<AbstractFilter> = mutableListOf()
+
     @FXML
     fun startCamera(
-        @Suppress("UNUSED_PARAMETER")
-        actionEvent: ActionEvent
+        @Suppress("UNUSED_PARAMETER") actionEvent: ActionEvent
     ) {
-        camera = Camera(
-            onFrame = ::onFrame,
-            onCameraStart = { startCameraButton.text = "Stop Camera" },
-            onCameraStop = { startCameraButton.text = "Start Camera" },
-        )
-        camera.toggle()
+        camera ?: run {
+            camera = Camera(
+                onFrame = ::onFrame,
+                onCameraStart = { playButton.text = "⏹" },
+                onCameraStop = { playButton.text = "▶" },
+                cameraId = 1
+            )
+        }
+        camera!!.toggle()
     }
 
     private fun onFrame(frame: Mat) {
         val originalFrameData = frame.toByteArray()
-        if (initialBlockAvg == null) {
-            initialBlockAvg = filter.applySplashPrep(originalFrameData)
+        initialBlockAvg ?: run {
+            initialBlockAvg = SplashPrepFilter(api = api).apply(originalFrameData)
         }
-        val originalImage = originalFrameData.toBufferedImage(camera.maxWidth, camera.maxHeight)
-        onFXThread(originalFrame.imageProperty(), SwingFXUtils.toFXImage(originalImage, null))
-        filter.applySplash(originalFrameData, initialBlockAvg!!).run {
-            val modifiedImage = this.first.toBufferedImage(camera.maxWidth, camera.maxHeight)
-            onFXThread(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
-            initialBlockAvg = this.second
+        var workingFrame = originalFrameData.clone()
+        filters.forEach { filter ->
+            workingFrame = filter.apply(workingFrame)
         }
-    }
-
-    fun setClosed() {
-        camera.close()
-        filter.close()
+        val initialImage = originalFrameData.toBufferedImage(camera!!.maxWidth, camera!!.maxHeight)
+        val modifiedImage = workingFrame.toBufferedImage(camera!!.maxWidth, camera!!.maxHeight)
+        onFXThread(originalFrame.imageProperty(), SwingFXUtils.toFXImage(initialImage, null))
+        onFXThread(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
     }
 
     private fun <T> onFXThread(property: ObjectProperty<T>, value: T) = Platform.runLater { property.set(value) }
+
+    fun setClosed() {
+        camera?.close()
+        api.close()
+    }
 }
