@@ -25,7 +25,7 @@ class Camera constructor(
 
     private val capture = VideoCapture()
 
-    private var cameraActive = false
+    var cameraActive = false
 
     private var frameLatencyMs = ONE_SECOND_MS / framesPerSecond
 

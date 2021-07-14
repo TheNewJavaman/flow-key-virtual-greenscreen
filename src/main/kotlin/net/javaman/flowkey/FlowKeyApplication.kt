@@ -37,8 +37,8 @@ class FlowKeyApplication : Application() {
         controller.originalHBox.minHeightProperty().bind(controller.originalPane.heightProperty())
         controller.originalFrame.fitWidthProperty().bind(controller.originalHBox.widthProperty())
         controller.originalFrame.fitHeightProperty().bind(controller.originalHBox.heightProperty())
-        controller.modifiedHBox.minWidthProperty().bind(controller.modifiedPane.widthProperty())
-        controller.modifiedHBox.minHeightProperty().bind(controller.modifiedPane.heightProperty())
+        controller.modifiedHBox.minWidthProperty().bind(controller.originalPane.widthProperty())
+        controller.modifiedHBox.minHeightProperty().bind(controller.originalPane.heightProperty())
         controller.modifiedFrame.fitWidthProperty().bind(controller.modifiedHBox.widthProperty())
         controller.modifiedFrame.fitHeightProperty().bind(controller.modifiedHBox.heightProperty())
         controller.filtersHeader.minWidthProperty().bind(controller.filtersPane.widthProperty())
@@ -46,7 +46,11 @@ class FlowKeyApplication : Application() {
         controller.generalSettingsHeader.minWidthProperty().bind(controller.generalSettingsPane.widthProperty())
         controller.filtersListView.minWidthProperty().bind(controller.filtersListPane.widthProperty())
         controller.filtersListView.minHeightProperty().bind(controller.filtersListPane.heightProperty())
-        controller.filterAdd.items.setAll(controller.api.getFilters().keys.toList().map { MenuItem(it) })
+        controller.filterAddMenu.items.setAll(controller.api.getFilters().keys.toList().map { name ->
+            val menuItem = MenuItem(name)
+            menuItem.setOnAction { controller.onFilterAddItem(name) }
+            menuItem
+        })
         primaryStage.onCloseRequest = EventHandler { controller.setClosed() }
     }
 }

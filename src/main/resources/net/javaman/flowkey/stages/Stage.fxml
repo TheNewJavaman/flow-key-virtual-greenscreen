@@ -2,10 +2,11 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ContextMenu?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
-<?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
@@ -16,19 +17,19 @@
 
 <GridPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1280.0" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.javaman.flowkey.stages.StageController">
   <columnConstraints>
-    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-      <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-      <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-      <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-      <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+    <ColumnConstraints hgrow="SOMETIMES" percentWidth="16.6666" />
+    <ColumnConstraints hgrow="SOMETIMES" percentWidth="16.6666" />
+      <ColumnConstraints hgrow="SOMETIMES" percentWidth="16.6666" />
+      <ColumnConstraints hgrow="SOMETIMES" percentWidth="16.6666" />
+      <ColumnConstraints hgrow="SOMETIMES" percentWidth="16.6666" />
+      <ColumnConstraints hgrow="SOMETIMES" percentWidth="16.6666" />
   </columnConstraints>
   <rowConstraints>
     <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
     <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
   </rowConstraints>
    <children>
-      <Pane fx:id="originalPane" prefHeight="200.0" prefWidth="200.0" GridPane.columnSpan="3">
+      <Pane fx:id="originalPane" GridPane.columnSpan="3">
          <children>
             <HBox fx:id="originalHBox" alignment="CENTER" prefHeight="100.0" prefWidth="200.0">
                <children>
@@ -37,7 +38,7 @@
             </HBox>
          </children>
       </Pane>
-      <Pane fx:id="modifiedPane" prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="3" GridPane.columnSpan="3">
+      <Pane fx:id="modifiedPane" GridPane.columnIndex="3" GridPane.columnSpan="3">
          <children>
             <HBox fx:id="modifiedHBox" alignment="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="100.0" prefWidth="200.0">
                <children>
@@ -51,6 +52,8 @@
             <GridPane fx:id="filtersHeader" hgap="4.0">
               <columnConstraints>
                 <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                  <ColumnConstraints hgrow="NEVER" minWidth="10.0" prefWidth="30.0" />
+                  <ColumnConstraints hgrow="NEVER" minWidth="10.0" prefWidth="30.0" />
                   <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="30.0" />
                 <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="30.0" />
               </columnConstraints>
@@ -59,19 +62,54 @@
               </rowConstraints>
                <children>
                   <Label maxWidth="1.7976931348623157E308" text="Filters" GridPane.hgrow="ALWAYS" />
-                  <Button fx:id="filterDelete" alignment="CENTER" contentDisplay="CENTER" maxHeight="29.0" maxWidth="29.0" minHeight="29.0" minWidth="29.0" mnemonicParsing="false" prefHeight="29.0" prefWidth="29.0" text="➖" GridPane.columnIndex="1" GridPane.hgrow="NEVER">
+                  <Button fx:id="filterDelete" alignment="CENTER" contentDisplay="CENTER" maxHeight="29.0" maxWidth="29.0" minHeight="29.0" minWidth="29.0" mnemonicParsing="false" onAction="#onFilterDeleteAction" prefHeight="29.0" prefWidth="29.0" GridPane.columnIndex="3" GridPane.hgrow="NEVER">
                      <font>
                         <Font size="8.0" />
                      </font>
+                     <graphic>
+                        <ImageView fx:id="filterDeleteIcon" fitHeight="17.0" fitWidth="17.0" pickOnBounds="true" preserveRatio="true">
+                           <image>
+                              <Image url="@../icons/delete.png" />
+                           </image>
+                        </ImageView>
+                     </graphic>
                   </Button>
-                  <MenuButton fx:id="filterAdd" alignment="CENTER" maxHeight="29.0" maxWidth="43.0" minHeight="29.0" minWidth="43.0" mnemonicParsing="false" prefHeight="29.0" prefWidth="43.0" text="➕" GridPane.columnIndex="2">
+                  <Button fx:id="filterAdd" maxHeight="29.0" maxWidth="29.0" minHeight="29.0" minWidth="29.0" mnemonicParsing="false" onAction="#onFilterAddAction" prefHeight="29.0" prefWidth="29.0" GridPane.columnIndex="4">
                      <font>
                         <Font size="8.0" />
                      </font>
-                  </MenuButton>
+                     <contextMenu>
+                        <ContextMenu fx:id="filterAddMenu" />
+                     </contextMenu>
+                     <graphic>
+                        <ImageView fx:id="filterAddIcon" fitHeight="17.0" fitWidth="17.0" pickOnBounds="true" preserveRatio="true">
+                           <image>
+                              <Image url="@../icons/add.png" />
+                           </image>
+                        </ImageView>
+                     </graphic>
+                  </Button>
+                  <Button fx:id="filterUp" maxHeight="29.0" maxWidth="29.0" minHeight="29.0" minWidth="29.0" mnemonicParsing="false" onAction="#onFilterUpAction" prefHeight="29.0" prefWidth="29.0" GridPane.columnIndex="1">
+                     <graphic>
+                        <ImageView fx:id="filterUpIcon" fitHeight="17.0" fitWidth="17.0" pickOnBounds="true" preserveRatio="true">
+                           <image>
+                              <Image url="@../icons/up.png" />
+                           </image>
+                        </ImageView>
+                     </graphic>
+                  </Button>
+                  <Button fx:id="filterDown" maxHeight="29.0" maxWidth="29.0" minHeight="29.0" minWidth="29.0" mnemonicParsing="false" onAction="#onFilterDownAction" prefHeight="29.0" prefWidth="29.0" GridPane.columnIndex="2">
+                     <graphic>
+                        <ImageView fx:id="filterDownIcon" fitHeight="17.0" fitWidth="17.0" pickOnBounds="true" preserveRatio="true">
+                           <image>
+                              <Image url="@../icons/down.png" />
+                           </image>
+                        </ImageView>
+                     </graphic>
+                  </Button>
                </children>
                <padding>
-                  <Insets left="10.0" right="19.0" />
+                  <Insets left="10.0" right="5.0" />
                </padding>
             </GridPane>
          </graphic>
@@ -123,15 +161,26 @@
                </rowConstraints>
                <children>
                   <Label maxWidth="1.7976931348623157E308" text="General Settings" GridPane.hgrow="ALWAYS" />
-                  <Button fx:id="playButton" alignment="CENTER" maxHeight="29.0" maxWidth="29.0" minHeight="29.0" minWidth="29.0" mnemonicParsing="false" onAction="#startCamera" prefHeight="29.0" prefWidth="29.0" text="▶" textOverrun="CLIP" wrapText="true" GridPane.columnIndex="1" GridPane.hgrow="NEVER">
+                  <Button fx:id="playButton" alignment="CENTER" maxHeight="29.0" maxWidth="29.0" minHeight="29.0" minWidth="29.0" mnemonicParsing="false" onAction="#startCamera" prefHeight="29.0" prefWidth="29.0" textOverrun="CLIP" wrapText="true" GridPane.columnIndex="1" GridPane.hgrow="NEVER">
                      <font>
                         <Font size="14.0" />
                      </font>
+                     <graphic>
+                        <ImageView fx:id="playButtonIcon" fitHeight="17.0" fitWidth="17.0" pickOnBounds="true" preserveRatio="true">
+                           <image>
+                              <Image url="@../icons/play.png" />
+                           </image>
+                        </ImageView>
+                     </graphic>
                   </Button>
-                  <Button fx:id="refreshButton" alignment="TOP_LEFT" maxHeight="29.0" maxWidth="29.0" minHeight="29.0" minWidth="29.0" mnemonicParsing="false" prefHeight="29.0" prefWidth="29.0" text="⟳" textAlignment="CENTER" textOverrun="CLIP" wrapText="true" GridPane.columnIndex="2" GridPane.hgrow="NEVER">
-                     <font>
-                        <Font size="14.0" />
-                     </font>
+                  <Button fx:id="refreshButton" maxHeight="29.0" maxWidth="29.0" minHeight="29.0" minWidth="29.0" mnemonicParsing="false" onAction="#onRefreshAction" prefHeight="29.0" prefWidth="29.0" GridPane.columnIndex="2">
+                     <graphic>
+                        <ImageView fx:id="refreshButtonIcon" fitHeight="17.0" fitWidth="17.0" pickOnBounds="true" preserveRatio="true">
+                           <image>
+                              <Image url="@../icons/refresh.png" />
+                           </image>
+                        </ImageView>
+                     </graphic>
                   </Button>
                </children>
                <padding>
