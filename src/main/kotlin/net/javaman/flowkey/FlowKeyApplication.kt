@@ -4,6 +4,7 @@ import javafx.application.Application
 import javafx.event.EventHandler
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
+import javafx.scene.control.MenuItem
 import javafx.scene.layout.GridPane
 import javafx.stage.Stage
 import mu.KotlinLogging
@@ -43,6 +44,9 @@ class FlowKeyApplication : Application() {
         controller.filtersHeader.minWidthProperty().bind(controller.filtersPane.widthProperty())
         controller.filterPropertiesHeader.minWidthProperty().bind(controller.filterPropertiesPane.widthProperty())
         controller.generalSettingsHeader.minWidthProperty().bind(controller.generalSettingsPane.widthProperty())
+        controller.filtersListView.minWidthProperty().bind(controller.filtersListPane.widthProperty())
+        controller.filtersListView.minHeightProperty().bind(controller.filtersListPane.heightProperty())
+        controller.filterAdd.items.setAll(controller.api.getFilters().keys.toList().map { MenuItem(it) })
         primaryStage.onCloseRequest = EventHandler { controller.setClosed() }
     }
 }

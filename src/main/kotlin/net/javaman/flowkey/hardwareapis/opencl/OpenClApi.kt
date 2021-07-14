@@ -13,13 +13,6 @@ class OpenClApi constructor(
     companion object : AbstractApi.AbstractApiConsts {
         override val LIST_NAME = "OpenCl"
 
-        override fun getFilters(api: AbstractApi): Map<String, AbstractFilter> = mapOf(
-            InitialComparisonFilter.LIST_NAME to InitialComparisonFilter(api = api as OpenClApi),
-            NoiseReductionFilter.LIST_NAME to NoiseReductionFilter(api = api),
-            FlowKeyFilter.LIST_NAME to FlowKeyFilter(api = api),
-            SplashFilter.LIST_NAME to SplashFilter(api = api),
-        )
-
         enum class ClMemOperation(val flags: Long) {
             // CL_MEM_USE_HOST_PTR instead of CL_MEM_COPY_HOST_PTR speeds up most operations for realtime video
             READ(CL_MEM_READ_ONLY or CL_MEM_USE_HOST_PTR),
@@ -109,6 +102,13 @@ class OpenClApi constructor(
         program = clCreateProgramWithSource(context, sources.size, sources, null, null)
         clBuildProgram(program, 0, null, null, null, null)
     }
+
+    override fun getFilters(): Map<String, AbstractFilter> = mapOf(
+        InitialComparisonFilter.LIST_NAME to InitialComparisonFilter(api = this),
+        NoiseReductionFilter.LIST_NAME to NoiseReductionFilter(api = this),
+        FlowKeyFilter.LIST_NAME to FlowKeyFilter(api = this),
+        SplashFilter.LIST_NAME to SplashFilter(api = this),
+    )
 
     override fun close() {
         clReleaseProgram(program)

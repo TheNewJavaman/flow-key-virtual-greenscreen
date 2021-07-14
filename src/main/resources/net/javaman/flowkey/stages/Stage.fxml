@@ -3,9 +3,10 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
@@ -27,7 +28,6 @@
     <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
   </rowConstraints>
    <children>
-      <Button fx:id="startCameraButton" mnemonicParsing="false" onAction="#startCamera" text="Start Camera" GridPane.columnIndex="4" GridPane.rowIndex="1" />
       <Pane fx:id="originalPane" prefHeight="200.0" prefWidth="200.0" GridPane.columnSpan="3">
          <children>
             <HBox fx:id="originalHBox" alignment="CENTER" prefHeight="100.0" prefWidth="200.0">
@@ -47,9 +47,6 @@
          </children>
       </Pane>
       <TitledPane fx:id="filtersPane" alignment="CENTER" animated="false" collapsible="false" contentDisplay="RIGHT" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" GridPane.columnSpan="2" GridPane.rowIndex="1">
-        <content>
-          <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
-        </content>
          <graphic>
             <GridPane fx:id="filtersHeader" hgap="4.0">
               <columnConstraints>
@@ -67,22 +64,26 @@
                         <Font size="8.0" />
                      </font>
                   </Button>
-                  <Button fx:id="filterAdd" alignment="CENTER" contentDisplay="CENTER" maxHeight="29.0" maxWidth="29.0" minHeight="29.0" minWidth="29.0" mnemonicParsing="false" prefHeight="29.0" prefWidth="29.0" text="➕" textAlignment="CENTER" GridPane.columnIndex="2" GridPane.hgrow="NEVER">
+                  <MenuButton fx:id="filterAdd" alignment="CENTER" maxHeight="29.0" maxWidth="43.0" minHeight="29.0" minWidth="43.0" mnemonicParsing="false" prefHeight="29.0" prefWidth="43.0" text="➕" GridPane.columnIndex="2">
                      <font>
                         <Font size="8.0" />
                      </font>
-                  </Button>
+                  </MenuButton>
                </children>
                <padding>
-                  <Insets left="10.0" right="5.0" />
+                  <Insets left="10.0" right="19.0" />
                </padding>
             </GridPane>
          </graphic>
+         <content>
+            <Pane fx:id="filtersListPane" prefHeight="200.0" prefWidth="200.0">
+               <children>
+                  <ListView fx:id="filtersListView" prefHeight="200.0" prefWidth="200.0" />
+               </children>
+            </Pane>
+         </content>
       </TitledPane>
       <TitledPane fx:id="filterPropertiesPane" alignment="CENTER" animated="false" collapsible="false" contentDisplay="RIGHT" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" GridPane.columnIndex="2" GridPane.columnSpan="2" GridPane.rowIndex="1">
-         <content>
-            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
-         </content>
          <graphic>
             <GridPane fx:id="filterPropertiesHeader" hgap="4.0">
                <columnConstraints>
@@ -101,11 +102,15 @@
                </padding>
             </GridPane>
          </graphic>
+         <content>
+            <Pane fx:id="filterPropertiesListPane" prefHeight="200.0" prefWidth="200.0">
+               <children>
+                  <ListView fx:id="filterPropertiesListView" prefHeight="200.0" prefWidth="200.0" />
+               </children>
+            </Pane>
+         </content>
       </TitledPane>
       <TitledPane fx:id="generalSettingsPane" alignment="CENTER" animated="false" collapsible="false" contentDisplay="RIGHT" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" GridPane.columnIndex="4" GridPane.columnSpan="2" GridPane.rowIndex="1">
-         <content>
-            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
-         </content>
          <graphic>
             <GridPane fx:id="generalSettingsHeader" hgap="4.0">
                <columnConstraints>
@@ -134,6 +139,11 @@
                </padding>
             </GridPane>
          </graphic>
+         <content>
+            <Pane fx:id="generalSettingsListPane" prefHeight="200.0" prefWidth="200.0">
+               <children>
+               </children></Pane>
+         </content>
       </TitledPane>
    </children>
 </GridPane>

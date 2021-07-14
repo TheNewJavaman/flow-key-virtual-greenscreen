@@ -7,12 +7,12 @@ import javafx.beans.property.ObjectProperty
 import javafx.embed.swing.SwingFXUtils
 import javafx.event.ActionEvent
 import javafx.fxml.FXML
-import javafx.scene.control.Button
-import javafx.scene.control.TitledPane
+import javafx.scene.control.*
 import javafx.scene.image.ImageView
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
+import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.opencl.OpenClApi
 import net.javaman.flowkey.hardwareapis.opencl.SplashPrepFilter
@@ -47,7 +47,7 @@ class StageController {
     lateinit var filtersHeader: GridPane
 
     @FXML
-    lateinit var filterAdd: Button
+    lateinit var filterAdd: MenuButton
 
     @FXML
     lateinit var filterDelete: Button
@@ -70,9 +70,21 @@ class StageController {
     @FXML
     lateinit var refreshButton: Button
 
+    @FXML
+    lateinit var filtersListPane: Pane
+
+    @FXML
+    lateinit var filtersListView: ListView<ListCell<String>>
+
+    @FXML
+    lateinit var filterPropertiesListPane: Pane
+
+    @FXML
+    lateinit var filterPropertiesListView: ListView<ListCell<String>>
+
     private var camera: Camera? = null
 
-    private val api = OpenClApi()
+    val api: AbstractApi = OpenClApi()
 
     private var initialBlockAvg: FloatArray? = null
 
@@ -85,7 +97,7 @@ class StageController {
         camera ?: run {
             camera = Camera(
                 onFrame = ::onFrame,
-                onCameraStart = { playButton.text = "⏹" },
+                onCameraStart = { playButton.text = "⏸" },
                 onCameraStop = { playButton.text = "▶" },
                 cameraId = 1
             )
@@ -96,7 +108,7 @@ class StageController {
     private fun onFrame(frame: Mat) {
         val originalFrameData = frame.toByteArray()
         initialBlockAvg ?: run {
-            initialBlockAvg = SplashPrepFilter(api = api).apply(originalFrameData)
+            initialBlockAvg = SplashPrepFilter(api = api as OpenClApi).apply(originalFrameData)
         }
         var workingFrame = originalFrameData.clone()
         filters.forEach { filter ->
