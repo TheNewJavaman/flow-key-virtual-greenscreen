@@ -5,7 +5,7 @@ Intelligent greenscreen software that adapts to uneven lighting
 ## Notes
 
 - Cuda support is not fully implemented; OpenCL is the priority for cross-platform support
-- Virtual camera support is fully implemented
+- Virtual camera support is not fully implemented
 - GUI support for changing settings is not implemented
 - Breaking up the pictures into blocks (so not working on a pixel-by-pixel basis) is only implemented for the `Splash` and `SplashPrep` filters
 - I'm just going to keep rewriting this software until it's performant and easy to use. Fun!

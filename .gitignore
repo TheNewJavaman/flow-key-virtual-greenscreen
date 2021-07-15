@@ -1,7 +1,9 @@
-# Project exclude paths
 /out/
 /*.log
 /*.jfr
 /.idea/
 /.vs/
 /ptx_out/
+.gradle
+build
+app/libs
