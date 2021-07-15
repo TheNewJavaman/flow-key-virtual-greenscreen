@@ -27,6 +27,7 @@
   <rowConstraints>
     <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
     <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+      <RowConstraints maxHeight="32.0" minHeight="10.0" prefHeight="32.0" valignment="CENTER" vgrow="NEVER" />
   </rowConstraints>
    <children>
       <Pane fx:id="originalPane" GridPane.columnSpan="3">
@@ -193,6 +194,32 @@
                <children>
                </children></Pane>
          </content>
+      </TitledPane>
+      <TitledPane fx:id="bottomBarPane" animated="false" collapsible="false" maxHeight="1.7976931348623157E308" GridPane.columnSpan="6" GridPane.rowIndex="2">
+         <graphic>
+            <GridPane fx:id="bottomBarGrid" hgap="10.0" maxHeight="23.0" maxWidth="1.7976931348623157E308" minHeight="23.0" prefHeight="23.0">
+              <columnConstraints>
+                <ColumnConstraints hgrow="NEVER" minWidth="10.0" />
+                <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" prefWidth="0.0" />
+                  <ColumnConstraints hgrow="NEVER" minWidth="10.0" />
+                  <ColumnConstraints hgrow="NEVER" minWidth="10.0" />
+              </columnConstraints>
+              <rowConstraints>
+                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+              </rowConstraints>
+               <children>
+                  <Label fx:id="versionLabel" text="Version 0.0.0" />
+                  <Label fx:id="latencyCounter" alignment="CENTER_RIGHT" maxWidth="1.7976931348623157E308" text="0ms Filter Latency" textAlignment="RIGHT" GridPane.columnIndex="2" />
+                  <Label fx:id="fpsCounter" alignment="CENTER_RIGHT" maxWidth="1.7976931348623157E308" text="0 FPS" textAlignment="RIGHT" GridPane.columnIndex="3" />
+               </children>
+               <padding>
+                  <Insets right="20.0" />
+               </padding>
+            </GridPane>
+         </graphic>
+         <GridPane.margin>
+            <Insets />
+         </GridPane.margin>
       </TitledPane>
    </children>
 </GridPane>

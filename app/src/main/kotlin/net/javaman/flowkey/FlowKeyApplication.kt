@@ -9,21 +9,27 @@ import javafx.scene.layout.GridPane
 import javafx.stage.Stage
 import net.javaman.flowkey.stages.StageController
 import org.opencv.core.Core
+import java.util.*
 import kotlin.system.exitProcess
 
 class FlowKeyApplication : Application() {
     companion object {
         lateinit var rootElement: GridPane
 
+        lateinit var version: String
+
         @JvmStatic
         fun main(args: Array<String>) {
             System.loadLibrary(Core.NATIVE_LIBRARY_NAME)
+            val properties = Properties()
+            properties.load(this::class.java.getResourceAsStream("application.properties"))
+            version = properties.getProperty("version")
             launch(FlowKeyApplication::class.java)
         }
     }
 
     override fun start(primaryStage: Stage) {
-        val loader = FXMLLoader(FlowKeyApplication::class.java.getResource("stages/Stage.fxml"))
+        val loader = FXMLLoader(this::class.java.getResource("stages/Stage.fxml"))
         rootElement = loader.load()
         val scene = Scene(rootElement, 1280.0, 800.0)
         primaryStage.title = "Flow Key Virtual Greenscreen"
@@ -50,9 +56,11 @@ class FlowKeyApplication : Application() {
         })
         controller.filterPropertiesListView.minWidthProperty().bind(controller.filterPropertiesListPane.widthProperty())
         controller.filterPropertiesListView.minHeightProperty().bind(controller.filterPropertiesListPane.heightProperty())
+        controller.bottomBarGrid.minWidthProperty().bind(controller.bottomBarPane.widthProperty())
+        controller.versionLabel.text = "Version $version"
         primaryStage.onCloseRequest = EventHandler {
             controller.setClosed()
-            exitProcess(1)
+            exitProcess(0)
         }
     }
 }

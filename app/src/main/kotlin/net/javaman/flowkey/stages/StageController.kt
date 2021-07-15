@@ -4,6 +4,7 @@ package net.javaman.flowkey.stages
 
 import javafx.application.Platform
 import javafx.beans.property.ObjectProperty
+import javafx.beans.property.StringProperty
 import javafx.embed.swing.SwingFXUtils
 import javafx.event.ActionEvent
 import javafx.fxml.FXML
@@ -18,11 +19,17 @@ import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.opencl.*
 import net.javaman.flowkey.util.Camera
+import net.javaman.flowkey.util.ONE_SECOND_MS
 import net.javaman.flowkey.util.toBufferedImage
 import net.javaman.flowkey.util.toByteArray
 import org.opencv.core.Mat
+import java.time.Instant
 
 class StageController {
+    companion object {
+        const val LATENCY_COUNTER_DELAY = 250L
+    }
+
     @FXML
     lateinit var originalPane: Pane
 
@@ -110,6 +117,21 @@ class StageController {
     @FXML
     lateinit var filterPropertiesListView: ListView<ListCell<String>>
 
+    @FXML
+    lateinit var bottomBarPane: TitledPane
+
+    @FXML
+    lateinit var bottomBarGrid: GridPane
+
+    @FXML
+    lateinit var versionLabel: Label
+
+    @FXML
+    lateinit var latencyCounter: Label
+
+    @FXML
+    lateinit var fpsCounter: Label
+
     private var camera: Camera? = null
 
     var api: AbstractApi = OpenClApi()
@@ -117,6 +139,8 @@ class StageController {
     private var initialBlockAvg: FloatArray? = null
 
     private val filters: MutableList<AbstractFilter> = mutableListOf()
+
+    private var lastTEndMilli = 0L
 
     @FXML
     fun startCamera(
@@ -136,11 +160,12 @@ class StageController {
     private fun onFrame(frame: Mat) {
         val originalFrameData = frame.toByteArray()
         val initialImage = originalFrameData.toBufferedImage(camera!!.maxWidth, camera!!.maxHeight)
-        onFXThread(originalFrame.imageProperty(), SwingFXUtils.toFXImage(initialImage, null))
+        onFXThreadImage(originalFrame.imageProperty(), SwingFXUtils.toFXImage(initialImage, null))
 
         initialBlockAvg ?: run {
             initialBlockAvg = OpenClSplashPrepFilter(api = api as OpenClApi).apply(originalFrameData)
         }
+        val tStart = Instant.now()
         var workingFrame = originalFrameData.clone()
         filters.forEach { filter ->
             when (filter) {
@@ -163,10 +188,21 @@ class StageController {
             workingFrame = filter.apply(workingFrame)
         }
         val modifiedImage = workingFrame.toBufferedImage(camera!!.maxWidth, camera!!.maxHeight)
-        onFXThread(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
+        onFXThreadImage(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
+        val tEnd = Instant.now()
+
+        if (tEnd.toEpochMilli() - lastTEndMilli > LATENCY_COUNTER_DELAY) {
+            val tDelta = tEnd.toEpochMilli() - tStart.toEpochMilli()
+            onFXThreadText(latencyCounter.textProperty(), "${tDelta}ms Filter Latency")
+            val fps = ONE_SECOND_MS / tDelta
+            onFXThreadText(fpsCounter.textProperty(), "$fps FPS")
+            lastTEndMilli = tEnd.toEpochMilli()
+        }
     }
 
-    private fun <T> onFXThread(property: ObjectProperty<T>, value: T) = Platform.runLater { property.set(value) }
+    private fun <T> onFXThreadImage(property: ObjectProperty<T>, value: T) = Platform.runLater { property.set(value) }
+
+    private fun onFXThreadText(property: StringProperty, value: String) = Platform.runLater { property.set(value) }
 
     private fun getImage(name: String) = Image(this::class.java.getResourceAsStream("../icons/$name.png"))
 
