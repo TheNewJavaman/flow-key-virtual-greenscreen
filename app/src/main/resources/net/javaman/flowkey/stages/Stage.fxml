@@ -5,6 +5,8 @@
 <?import javafx.scene.control.ContextMenu?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
@@ -142,9 +144,17 @@
             </GridPane>
          </graphic>
          <content>
-            <Pane fx:id="filterPropertiesListPane" prefHeight="200.0" prefWidth="200.0">
+            <Pane fx:id="filterPropertiesTablePane" prefHeight="200.0" prefWidth="200.0">
                <children>
-                  <ListView fx:id="filterPropertiesListView" prefHeight="200.0" prefWidth="200.0" />
+                  <TableView fx:id="filterPropertiesTableView" prefHeight="200.0" prefWidth="200.0">
+                    <columns>
+                      <TableColumn fx:id="filterPropertiesName" editable="false" prefWidth="75.0" sortable="false" text="Property" />
+                      <TableColumn fx:id="filterPropertiesValue" editable="false" prefWidth="75.0" sortable="false" text="Value" />
+                    </columns>
+                     <columnResizePolicy>
+                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                     </columnResizePolicy>
+                  </TableView>
                </children>
             </Pane>
          </content>

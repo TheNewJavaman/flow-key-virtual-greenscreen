@@ -1,5 +1,7 @@
 // Adapted from https://opencv-java-tutorials.readthedocs.io/en/latest/_images/03-08.png
 
+@file:Suppress("WildcardImport")
+
 package net.javaman.flowkey.stages
 
 import javafx.application.Platform
@@ -17,6 +19,7 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
+import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
 import net.javaman.flowkey.hardwareapis.opencl.*
 import net.javaman.flowkey.util.Camera
 import net.javaman.flowkey.util.ONE_SECOND_MS
@@ -25,6 +28,7 @@ import net.javaman.flowkey.util.toByteArray
 import org.opencv.core.Mat
 import java.time.Instant
 
+@Suppress("TooManyFunctions")
 class StageController {
     companion object {
         const val LATENCY_COUNTER_DELAY = 250L
@@ -112,10 +116,16 @@ class StageController {
     lateinit var filtersListView: ListView<ListCell<String>>
 
     @FXML
-    lateinit var filterPropertiesListPane: Pane
+    lateinit var filterPropertiesTablePane: Pane
 
     @FXML
-    lateinit var filterPropertiesListView: ListView<ListCell<String>>
+    lateinit var filterPropertiesTableView: TableView<Pair<AbstractFilterProperty, Any>>
+
+    @FXML
+    lateinit var filterPropertiesName: TableColumn<Pair<AbstractFilterProperty, Any>, String>
+
+    @FXML
+    lateinit var filterPropertiesValue: TableColumn<Pair<AbstractFilterProperty, Any>, Number>
 
     @FXML
     lateinit var bottomBarPane: TitledPane
@@ -187,9 +197,9 @@ class StageController {
             }
             workingFrame = filter.apply(workingFrame)
         }
+        val tEnd = Instant.now()
         val modifiedImage = workingFrame.toBufferedImage(camera!!.maxWidth, camera!!.maxHeight)
         onFXThreadImage(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
-        val tEnd = Instant.now()
 
         if (tEnd.toEpochMilli() - lastTEndMilli > LATENCY_COUNTER_DELAY) {
             val tDelta = tEnd.toEpochMilli() - tStart.toEpochMilli()
@@ -231,6 +241,7 @@ class StageController {
         api.getFilters()[name]?.let {
             filters.add(it)
         }
+        updateFilterProperties()
     }
 
     @FXML
@@ -244,11 +255,14 @@ class StageController {
                 .forEach { it.id = (it.id.toInt() - 1).toString() }
             val selectionId = if (id.toInt() == filters.size - 1) {
                 filters.size - 2
+            } else if (id.toInt() == 0 && filters.size == 1){
+                null
             } else {
                 id.toInt()
             }
-            filtersListView.selectionModel.select(selectionId)
+            selectionId?.let { filtersListView.selectionModel.select(it) }
             filters.removeAt(id.toInt())
+            selectionId?.let { updateFilterProperties() }
         }
     }
 
@@ -271,6 +285,7 @@ class StageController {
                 val filter = filters[id.toInt()]
                 filters.removeAt(id.toInt())
                 filters.add(id.toInt() - 1, filter)
+                updateFilterProperties()
             }
         }
     }
@@ -292,8 +307,17 @@ class StageController {
                 val filter = filters[id.toInt()]
                 filters.removeAt(id.toInt())
                 filters.add(id.toInt() + 1, filter)
+                updateFilterProperties()
             }
         }
+    }
+
+    fun updateFilterProperties() {
+        filtersListView.selectionModel.selectedItem?.id?.let { id ->
+            val filter = filters[id.toInt()]
+            val properties = filter.getProperties()
+            filterPropertiesTableView.items.setAll(properties.toList())
+        } ?: filterPropertiesTableView.items.setAll()
     }
 
     fun setClosed() {

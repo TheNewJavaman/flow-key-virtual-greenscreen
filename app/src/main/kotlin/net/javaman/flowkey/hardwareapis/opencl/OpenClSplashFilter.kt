@@ -1,3 +1,5 @@
+@file:Suppress("WildcardImport")
+
 package net.javaman.flowkey.hardwareapis.opencl
 
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
@@ -12,7 +14,7 @@ import org.jocl.Pointer
 import org.jocl.Sizeof
 import kotlin.math.ceil
 
-class OpenClSplashFilter constructor(
+class OpenClSplashFilter @Suppress("LongParameterList") constructor(
     private val api: OpenClApi,
     var colorKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
     var percentTolerance: Float = 0.12f,
@@ -39,6 +41,7 @@ class OpenClSplashFilter constructor(
         AbstractFilterProperty.BLOCK_SIZE to blockSize
     )
 
+    @Suppress("LongMethod")
     override fun apply(inputBuffer: ByteArray): ByteArray {
         val outputBuffer = ByteArray(size = inputBuffer.size)
         val floatOptionsBuffer = floatArrayOf(percentTolerance)

@@ -5,6 +5,7 @@ import org.opencv.videoio.VideoCapture
 import org.opencv.videoio.Videoio
 import java.util.concurrent.*
 
+@Suppress("LongParameterList")
 class Camera constructor(
     private val onFrame: (Mat) -> Unit,
     private val onCameraStart: () -> Unit,
@@ -51,10 +52,7 @@ class Camera constructor(
     private fun grabFrame(): Mat {
         val frame = Mat()
         if (capture.isOpened) {
-            try {
-                capture.read(frame)
-            } catch (e: Exception) {
-            }
+            capture.read(frame)
         }
         return frame
     }

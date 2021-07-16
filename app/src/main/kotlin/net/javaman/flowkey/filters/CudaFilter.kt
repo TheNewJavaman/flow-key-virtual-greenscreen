@@ -1,5 +1,7 @@
 // Adapted from https://github.com/jcuda/jcuda-samples/blob/master/JCudaSamples/src/main/java/jcuda/driver/samples/JCudaVectorAdd.java
 
+@file:Suppress("WildcardImport")
+
 package net.javaman.flowkey.filters
 
 import jcuda.Pointer
@@ -12,7 +14,7 @@ import net.javaman.flowkey.util.DEFAULT_WIDTH_PIXELS
 import kotlin.math.ceil
 
 
-class CudaFilter constructor(
+class CudaFilter @Suppress("LongParameterList") constructor(
     private val percentTolerance: Float = 0.01f,
     private val gradientTolerance: Float = 0.03f,
     private val colorKey: ByteArray = byteArrayOf(0, 0, 0),
@@ -25,7 +27,7 @@ class CudaFilter constructor(
     private val blockSize: Int = 256
 ) {
     companion object {
-        @Suppress("Unused")
+        @Suppress("Unused", "MagicNumber")
         enum class ColorSpace(val i: Int) {
             BLUE(0),
             RED(1),

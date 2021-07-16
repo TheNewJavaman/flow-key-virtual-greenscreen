@@ -1,3 +1,5 @@
+@file:Suppress("WildcardImport")
+
 package net.javaman.flowkey.hardwareapis.opencl
 
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
@@ -12,10 +14,10 @@ import org.jocl.Pointer
 import org.jocl.Sizeof
 import kotlin.math.ceil
 
-class OpenClInitialComparisonFilter constructor(
+class OpenClInitialComparisonFilter @Suppress("LongParameterList") constructor(
     private val api: OpenClApi,
     //var colorKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
-    var colorKey: ByteArray = byteArrayOf(86, 112, 18),
+    var colorKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
     var replacementKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
     var percentTolerance: Float = 0.025f,
     var colorSpace: ColorSpace = ColorSpace.ALL,
@@ -35,6 +37,7 @@ class OpenClInitialComparisonFilter constructor(
         AbstractFilterProperty.COLOR_SPACE to colorSpace
     )
 
+    @Suppress("LongMethod")
     override fun apply(inputBuffer: ByteArray): ByteArray {
         val outputBuffer = ByteArray(size = inputBuffer.size)
         val floatOptionsBuffer = floatArrayOf(percentTolerance)

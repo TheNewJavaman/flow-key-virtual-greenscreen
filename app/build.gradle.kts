@@ -4,6 +4,7 @@ plugins {
     application
     kotlin("jvm") version "1.5.21"
     id("org.openjfx.javafxplugin") version "0.0.10"
+    id("io.gitlab.arturbosch.detekt") version "1.18.0-RC1"
 }
 
 repositories {

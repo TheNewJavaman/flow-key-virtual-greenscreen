@@ -1,3 +1,5 @@
+@file:Suppress("WildcardImport")
+
 package net.javaman.flowkey.hardwareapis.opencl
 
 import net.javaman.flowkey.hardwareapis.opencl.OpenClApi.Companion.ClMemOperation

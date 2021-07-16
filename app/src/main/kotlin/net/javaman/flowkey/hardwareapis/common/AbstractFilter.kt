@@ -15,7 +15,7 @@ enum class AbstractFilterProperty(
     val dataType: AbstractFilterPropertyType
 ) {
     TOLERANCE("Tolerance", AbstractFilterPropertyType.FLOAT),
-    ITERATIONS("Iterations", AbstractFilterPropertyType.FLOAT),
+    ITERATIONS("Iterations", AbstractFilterPropertyType.INT),
     COLOR_KEY("Color Key", AbstractFilterPropertyType.COLOR),
     REPLACEMENT_KEY("Replacement Key", AbstractFilterPropertyType.COLOR),
     COLOR_SPACE("Color Space", AbstractFilterPropertyType.COLOR_SPACE),

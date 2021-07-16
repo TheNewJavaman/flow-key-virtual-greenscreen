@@ -1,22 +1,30 @@
 package net.javaman.flowkey
 
 import javafx.application.Application
+import javafx.beans.property.SimpleStringProperty
 import javafx.event.EventHandler
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
+import javafx.scene.control.Label
 import javafx.scene.control.MenuItem
 import javafx.scene.layout.GridPane
 import javafx.stage.Stage
+import net.javaman.flowkey.stages.FilterPropertyTableCell
 import net.javaman.flowkey.stages.StageController
 import org.opencv.core.Core
 import java.util.*
 import kotlin.system.exitProcess
+
 
 class FlowKeyApplication : Application() {
     companion object {
         lateinit var rootElement: GridPane
 
         lateinit var version: String
+
+        const val DEFAULT_WIDTH = 1280.0
+
+        const val DEFAULT_HEIGHT = 800.0
 
         @JvmStatic
         fun main(args: Array<String>) {
@@ -31,7 +39,7 @@ class FlowKeyApplication : Application() {
     override fun start(primaryStage: Stage) {
         val loader = FXMLLoader(this::class.java.getResource("stages/Stage.fxml"))
         rootElement = loader.load()
-        val scene = Scene(rootElement, 1280.0, 800.0)
+        val scene = Scene(rootElement, DEFAULT_WIDTH, DEFAULT_HEIGHT)
         primaryStage.title = "Flow Key Virtual Greenscreen"
         primaryStage.scene = scene
         primaryStage.show()
@@ -49,13 +57,18 @@ class FlowKeyApplication : Application() {
         controller.generalSettingsHeader.minWidthProperty().bind(controller.generalSettingsPane.widthProperty())
         controller.filtersListView.minWidthProperty().bind(controller.filtersListPane.widthProperty())
         controller.filtersListView.minHeightProperty().bind(controller.filtersListPane.heightProperty())
+        controller.filtersListView.placeholder = Label("Nothing here yet.\nAdd a filter above!")
         controller.filterAddMenu.items.setAll(controller.api.getFilters().keys.toList().map { name ->
             val menuItem = MenuItem(name)
             menuItem.setOnAction { controller.onFilterAddItem(name) }
             menuItem
         })
-        controller.filterPropertiesListView.minWidthProperty().bind(controller.filterPropertiesListPane.widthProperty())
-        controller.filterPropertiesListView.minHeightProperty().bind(controller.filterPropertiesListPane.heightProperty())
+        controller.filterPropertiesTableView.minWidthProperty()
+            .bind(controller.filterPropertiesTablePane.widthProperty())
+        controller.filterPropertiesTableView.minHeightProperty()
+            .bind(controller.filterPropertiesTablePane.heightProperty())
+        controller.filterPropertiesName.setCellValueFactory { data -> SimpleStringProperty(data.value.first.listName) }
+        controller.filterPropertiesValue.setCellFactory { FilterPropertyTableCell() }
         controller.bottomBarGrid.minWidthProperty().bind(controller.bottomBarPane.widthProperty())
         controller.versionLabel.text = "Version $version"
         primaryStage.onCloseRequest = EventHandler {

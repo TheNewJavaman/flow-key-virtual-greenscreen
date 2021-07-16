@@ -1,3 +1,5 @@
+@file:Suppress("WildcardImport")
+
 package net.javaman.flowkey.hardwareapis.opencl
 
 import net.javaman.flowkey.hardwareapis.common.AbstractApi
@@ -11,7 +13,7 @@ class OpenClApi constructor(
     val localWorkSize: Long? = null
 ) : AbstractApi {
     companion object : AbstractApi.AbstractApiConsts {
-        override val LIST_NAME = "OpenCl"
+        override val listName = "OpenCl"
 
         enum class ClMemOperation(val flags: Long) {
             // CL_MEM_USE_HOST_PTR instead of CL_MEM_COPY_HOST_PTR speeds up most operations for realtime video
@@ -28,7 +30,8 @@ class OpenClApi constructor(
             return platforms
         }
 
-        private fun getPlatform(platformId: Int) = getPlatforms()[platformId] ?: throw ArrayIndexOutOfBoundsException()
+        private fun getPlatform(platformId: Int) = getPlatforms()[platformId]
+            ?: throw ArrayIndexOutOfBoundsException("Couldn't find the specified platform")
 
         fun getPlatformsMap(): Map<Int, String> {
             val platforms = getPlatforms()
@@ -54,8 +57,8 @@ class OpenClApi constructor(
             return devices
         }
 
-        private fun getDevice(platformId: Int, deviceId: Int) =
-            getDevices(platformId)[deviceId] ?: throw ArrayIndexOutOfBoundsException()
+        private fun getDevice(platformId: Int, deviceId: Int) = getDevices(platformId)[deviceId]
+                ?: throw ArrayIndexOutOfBoundsException("Couldn't find the specified platform or device")
 
         fun getDevicesMap(platformId: Int): Map<Int, String> {
             val devices = getDevices(platformId)

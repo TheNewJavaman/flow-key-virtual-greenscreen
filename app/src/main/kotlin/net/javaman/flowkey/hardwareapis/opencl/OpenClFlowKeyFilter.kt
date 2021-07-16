@@ -1,3 +1,5 @@
+@file:Suppress("WildcardImport")
+
 package net.javaman.flowkey.hardwareapis.opencl
 
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
@@ -13,7 +15,7 @@ import org.jocl.Pointer
 import org.jocl.Sizeof
 import kotlin.math.ceil
 
-class OpenClFlowKeyFilter constructor(
+class OpenClFlowKeyFilter @Suppress("LongParameterList") constructor(
     private val api: OpenClApi = OpenClApi(),
     var iterations: Int = 3,
     var colorKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
@@ -38,6 +40,7 @@ class OpenClFlowKeyFilter constructor(
         AbstractFilterProperty.COLOR_SPACE to colorSpace
     )
 
+    @Suppress("LongMethod")
     override fun apply(inputBuffer: ByteArray): ByteArray {
         var mutableInputBuffer = inputBuffer.clone()
 

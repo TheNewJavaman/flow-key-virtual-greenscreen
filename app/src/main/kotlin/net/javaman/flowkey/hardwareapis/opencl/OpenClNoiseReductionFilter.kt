@@ -1,3 +1,5 @@
+@file:Suppress("WildcardImport")
+
 package net.javaman.flowkey.hardwareapis.opencl
 
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
@@ -12,7 +14,7 @@ import org.jocl.Pointer
 import org.jocl.Sizeof
 import kotlin.math.ceil
 
-class OpenClNoiseReductionFilter constructor(
+class OpenClNoiseReductionFilter @Suppress("LongParameterList") constructor(
     private val api: OpenClApi = OpenClApi(),
     var iterations: Int = 5,
     var colorKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
@@ -36,7 +38,7 @@ class OpenClNoiseReductionFilter constructor(
     override fun apply(inputBuffer: ByteArray): ByteArray {
         var mutableInputBuffer = inputBuffer.clone()
 
-        for (i in 0 until iterations) {
+        repeat(iterations) {
             val outputBuffer = ByteArray(size = mutableInputBuffer.size)
             val intOptionsBuffer = intArrayOf(0, width, height)
 
