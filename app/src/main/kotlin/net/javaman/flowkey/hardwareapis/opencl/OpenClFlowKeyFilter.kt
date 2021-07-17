@@ -36,9 +36,18 @@ class OpenClFlowKeyFilter @Suppress("LongParameterList") constructor(
         AbstractFilterProperty.TOLERANCE to gradientTolerance,
         AbstractFilterProperty.ITERATIONS to iterations,
         AbstractFilterProperty.COLOR_KEY to colorKey,
-        AbstractFilterProperty.REPLACEMENT_KEY to colorKey,
+        AbstractFilterProperty.REPLACEMENT_KEY to replacementKey,
         AbstractFilterProperty.COLOR_SPACE to colorSpace
     )
+
+    override fun setProperty(listName: String, newValue: Any) = when (listName) {
+        AbstractFilterProperty.TOLERANCE.listName -> gradientTolerance = newValue as Float
+        AbstractFilterProperty.ITERATIONS.listName -> iterations = newValue as Int
+        AbstractFilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
+        AbstractFilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
+        AbstractFilterProperty.COLOR_SPACE.listName -> colorSpace = newValue as ColorSpace
+        else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
+    }
 
     @Suppress("LongMethod")
     override fun apply(inputBuffer: ByteArray): ByteArray {

@@ -37,6 +37,13 @@ class OpenClInitialComparisonFilter @Suppress("LongParameterList") constructor(
         AbstractFilterProperty.COLOR_SPACE to colorSpace
     )
 
+    override fun setProperty(listName: String, newValue: Any) = when (listName) {
+        AbstractFilterProperty.TOLERANCE.listName -> percentTolerance = newValue as Float
+        AbstractFilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
+        AbstractFilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
+        else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
+    }
+
     @Suppress("LongMethod")
     override fun apply(inputBuffer: ByteArray): ByteArray {
         val outputBuffer = ByteArray(size = inputBuffer.size)

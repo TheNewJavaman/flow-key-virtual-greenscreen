@@ -35,6 +35,13 @@ class OpenClNoiseReductionFilter @Suppress("LongParameterList") constructor(
         AbstractFilterProperty.REPLACEMENT_KEY to replacementKey
     )
 
+    override fun setProperty(listName: String, newValue: Any) = when (listName) {
+        AbstractFilterProperty.ITERATIONS.listName -> iterations = newValue as Int
+        AbstractFilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
+        AbstractFilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
+        else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
+    }
+
     override fun apply(inputBuffer: ByteArray): ByteArray {
         var mutableInputBuffer = inputBuffer.clone()
 

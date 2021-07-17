@@ -31,8 +31,10 @@ import java.time.Instant
 @Suppress("TooManyFunctions")
 class StageController {
     companion object {
-        const val LATENCY_COUNTER_DELAY = 250L
+        const val LATENCY_COUNTER_DELAY_MS = 250L
     }
+
+    lateinit var rootElement: GridPane
 
     @FXML
     lateinit var originalPane: Pane
@@ -148,7 +150,7 @@ class StageController {
 
     private var initialBlockAvg: FloatArray? = null
 
-    private val filters: MutableList<AbstractFilter> = mutableListOf()
+    val filters: MutableList<AbstractFilter> = mutableListOf()
 
     private var lastTEndMilli = 0L
 
@@ -201,7 +203,7 @@ class StageController {
         val modifiedImage = workingFrame.toBufferedImage(camera!!.maxWidth, camera!!.maxHeight)
         onFXThreadImage(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
 
-        if (tEnd.toEpochMilli() - lastTEndMilli > LATENCY_COUNTER_DELAY) {
+        if (tEnd.toEpochMilli() - lastTEndMilli > LATENCY_COUNTER_DELAY_MS) {
             val tDelta = tEnd.toEpochMilli() - tStart.toEpochMilli()
             onFXThreadText(latencyCounter.textProperty(), "${tDelta}ms Filter Latency")
             val fps = ONE_SECOND_MS / tDelta
@@ -232,16 +234,13 @@ class StageController {
     ) = filterAddMenu.show(filterAdd, Side.BOTTOM, 0.0, 0.0)
 
     fun onFilterAddItem(name: String) {
+        api.getFilters()[name]?.let { filters.add(it) }
         val listCell = ListCell<String>()
         listCell.text = name
-        listCell.id = filters.size.toString()
+        listCell.id = (filters.size - 1).toString()
         listCell.maxWidth = Double.MAX_VALUE
         filtersListView.items.add(listCell)
-        filtersListView.selectionModel.select(filters.size)
-        api.getFilters()[name]?.let {
-            filters.add(it)
-        }
-        updateFilterProperties()
+        filtersListView.selectionModel.select(listCell)
     }
 
     @FXML

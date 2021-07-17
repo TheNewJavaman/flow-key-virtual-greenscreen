@@ -3,6 +3,8 @@ package net.javaman.flowkey.hardwareapis.common
 interface AbstractFilter {
     fun getProperties(): Map<AbstractFilterProperty, Any>
 
+    fun setProperty(listName: String, newValue: Any)
+
     fun apply(inputBuffer: ByteArray): ByteArray
 }
 
