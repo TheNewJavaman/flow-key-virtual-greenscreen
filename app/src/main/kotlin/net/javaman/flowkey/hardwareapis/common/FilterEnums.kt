@@ -1,11 +1,11 @@
 package net.javaman.flowkey.hardwareapis.common
 
 @Suppress("Unused", "MagicNumber")
-enum class ColorSpace(val i: Int) {
-    BLUE(0),
-    GREEN(1),
-    RED(2),
-    ALL(3)
+enum class ColorSpace(val i: Int, val listName: String) {
+    BLUE(0, "Blue"),
+    GREEN(1, "Green"),
+    RED(2, "Red"),
+    ALL(3, "All")
 }
 
 @Suppress("Unused")

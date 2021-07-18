@@ -18,7 +18,6 @@ class OpenClNoiseReductionFilter @Suppress("LongParameterList") constructor(
     private val api: OpenClApi = OpenClApi(),
     var iterations: Int = 5,
     var colorKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
-    var replacementKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
     var width: Int = DEFAULT_WIDTH_PIXELS,
     var height: Int = DEFAULT_HEIGHT_PIXELS,
     var templateBuffer: ByteArray = ByteArray(size = width * height * COLOR_DEPTH)
@@ -32,13 +31,11 @@ class OpenClNoiseReductionFilter @Suppress("LongParameterList") constructor(
     override fun getProperties(): Map<AbstractFilterProperty, Any> = mapOf(
         AbstractFilterProperty.ITERATIONS to iterations,
         AbstractFilterProperty.COLOR_KEY to colorKey,
-        AbstractFilterProperty.REPLACEMENT_KEY to replacementKey
     )
 
     override fun setProperty(listName: String, newValue: Any) = when (listName) {
         AbstractFilterProperty.ITERATIONS.listName -> iterations = newValue as Int
         AbstractFilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
-        AbstractFilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
         else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
     }
 
@@ -52,7 +49,7 @@ class OpenClNoiseReductionFilter @Suppress("LongParameterList") constructor(
             val inputPtr = Pointer.to(mutableInputBuffer)
             val outputPtr = Pointer.to(outputBuffer)
             val templatePtr = Pointer.to(templateBuffer)
-            val colorKeyPtr = Pointer.to(replacementKey)
+            val colorKeyPtr = Pointer.to(colorKey)
             val intOptionsPtr = Pointer.to(intOptionsBuffer)
 
             val inputMem = api.allocMem(inputPtr, ClMemOperation.READ, Sizeof.cl_char * mutableInputBuffer.size)

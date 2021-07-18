@@ -13,7 +13,7 @@ import net.javaman.flowkey.util.DEFAULT_HEIGHT_PIXELS
 import net.javaman.flowkey.util.DEFAULT_WIDTH_PIXELS
 import kotlin.math.ceil
 
-
+@Deprecated("Need to migrate to `AbstractApi`")
 class CudaFilter @Suppress("LongParameterList") constructor(
     private val percentTolerance: Float = 0.01f,
     private val gradientTolerance: Float = 0.03f,

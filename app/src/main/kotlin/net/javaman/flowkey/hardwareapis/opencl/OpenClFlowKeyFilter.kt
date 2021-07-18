@@ -19,7 +19,6 @@ class OpenClFlowKeyFilter @Suppress("LongParameterList") constructor(
     private val api: OpenClApi = OpenClApi(),
     var iterations: Int = 3,
     var colorKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
-    var replacementKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
     var gradientTolerance: Float = 0.025f,
     var colorSpace: ColorSpace = ColorSpace.ALL,
     var width: Int = DEFAULT_WIDTH_PIXELS,
@@ -35,16 +34,14 @@ class OpenClFlowKeyFilter @Suppress("LongParameterList") constructor(
     override fun getProperties(): Map<AbstractFilterProperty, Any> = mapOf(
         AbstractFilterProperty.TOLERANCE to gradientTolerance,
         AbstractFilterProperty.ITERATIONS to iterations,
-        AbstractFilterProperty.COLOR_KEY to colorKey,
-        AbstractFilterProperty.REPLACEMENT_KEY to replacementKey,
+        AbstractFilterProperty.REPLACEMENT_KEY to colorKey,
         AbstractFilterProperty.COLOR_SPACE to colorSpace
     )
 
     override fun setProperty(listName: String, newValue: Any) = when (listName) {
         AbstractFilterProperty.TOLERANCE.listName -> gradientTolerance = newValue as Float
         AbstractFilterProperty.ITERATIONS.listName -> iterations = newValue as Int
-        AbstractFilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
-        AbstractFilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
+        AbstractFilterProperty.REPLACEMENT_KEY.listName -> colorKey = newValue as ByteArray
         AbstractFilterProperty.COLOR_SPACE.listName -> colorSpace = newValue as ColorSpace
         else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
     }
@@ -61,7 +58,7 @@ class OpenClFlowKeyFilter @Suppress("LongParameterList") constructor(
             val inputPtr = Pointer.to(mutableInputBuffer)
             val outputPtr = Pointer.to(outputBuffer)
             val templatePtr = Pointer.to(templateBuffer)
-            val colorKeyPtr = Pointer.to(replacementKey)
+            val colorKeyPtr = Pointer.to(colorKey)
             val floatOptionsPtr = Pointer.to(floatOptionsBuffer)
             val intOptionsPtr = Pointer.to(intOptionsBuffer)
 

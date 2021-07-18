@@ -21,17 +21,13 @@ import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
 import net.javaman.flowkey.hardwareapis.opencl.*
-import net.javaman.flowkey.util.Camera
-import net.javaman.flowkey.util.ONE_SECOND_MS
-import net.javaman.flowkey.util.toBufferedImage
-import net.javaman.flowkey.util.toByteArray
+import net.javaman.flowkey.util.*
 import org.opencv.core.Mat
-import java.time.Instant
 
 @Suppress("TooManyFunctions")
 class StageController {
     companion object {
-        const val LATENCY_COUNTER_DELAY_MS = 250L
+        const val LATENCY_COUNTER_DELAY_NS = 250_000_000L
     }
 
     lateinit var rootElement: GridPane
@@ -152,7 +148,7 @@ class StageController {
 
     val filters: MutableList<AbstractFilter> = mutableListOf()
 
-    private var lastTEndMilli = 0L
+    private var lastInstant = System.nanoTime()
 
     @FXML
     fun startCamera(
@@ -171,13 +167,10 @@ class StageController {
 
     private fun onFrame(frame: Mat) {
         val originalFrameData = frame.toByteArray()
-        val initialImage = originalFrameData.toBufferedImage(camera!!.maxWidth, camera!!.maxHeight)
-        onFXThreadImage(originalFrame.imageProperty(), SwingFXUtils.toFXImage(initialImage, null))
-
         initialBlockAvg ?: run {
             initialBlockAvg = OpenClSplashPrepFilter(api = api as OpenClApi).apply(originalFrameData)
         }
-        val tStart = Instant.now()
+        val tStart = System.nanoTime()
         var workingFrame = originalFrameData.clone()
         filters.forEach { filter ->
             when (filter) {
@@ -199,17 +192,23 @@ class StageController {
             }
             workingFrame = filter.apply(workingFrame)
         }
-        val tEnd = Instant.now()
-        val modifiedImage = workingFrame.toBufferedImage(camera!!.maxWidth, camera!!.maxHeight)
-        onFXThreadImage(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
-
-        if (tEnd.toEpochMilli() - lastTEndMilli > LATENCY_COUNTER_DELAY_MS) {
-            val tDelta = tEnd.toEpochMilli() - tStart.toEpochMilli()
-            onFXThreadText(latencyCounter.textProperty(), "${tDelta}ms Filter Latency")
-            val fps = ONE_SECOND_MS / tDelta
-            onFXThreadText(fpsCounter.textProperty(), "$fps FPS")
-            lastTEndMilli = tEnd.toEpochMilli()
+        val tEnd = System.nanoTime()
+        if (tEnd - lastInstant > LATENCY_COUNTER_DELAY_NS) {
+            val tDelta = tEnd - tStart
+            onFXThreadText(
+                latencyCounter.textProperty(),
+                "${(tDelta / NS_PER_MS.toDouble()).format(2)}ms Filter Latency"
+            )
+            val fps = ONE_SECOND_NS / tDelta.toDouble()
+            onFXThreadText(fpsCounter.textProperty(), "${fps.format(2)} FPS")
+            lastInstant = tEnd
         }
+        Thread {
+            val modifiedImage = workingFrame.toBufferedImage(camera!!.maxWidth, camera!!.maxHeight)
+            onFXThreadImage(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
+            val initialImage = originalFrameData.toBufferedImage(camera!!.maxWidth, camera!!.maxHeight)
+            onFXThreadImage(originalFrame.imageProperty(), SwingFXUtils.toFXImage(initialImage, null))
+        }.start()
     }
 
     private fun <T> onFXThreadImage(property: ObjectProperty<T>, value: T) = Platform.runLater { property.set(value) }
@@ -254,7 +253,7 @@ class StageController {
                 .forEach { it.id = (it.id.toInt() - 1).toString() }
             val selectionId = if (id.toInt() == filters.size - 1) {
                 filters.size - 2
-            } else if (id.toInt() == 0 && filters.size == 1){
+            } else if (id.toInt() == 0 && filters.size == 1) {
                 null
             } else {
                 id.toInt()

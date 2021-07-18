@@ -16,7 +16,6 @@ import kotlin.math.ceil
 
 class OpenClInitialComparisonFilter @Suppress("LongParameterList") constructor(
     private val api: OpenClApi,
-    //var colorKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
     var colorKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
     var replacementKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
     var percentTolerance: Float = 0.025f,
@@ -41,6 +40,7 @@ class OpenClInitialComparisonFilter @Suppress("LongParameterList") constructor(
         AbstractFilterProperty.TOLERANCE.listName -> percentTolerance = newValue as Float
         AbstractFilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
         AbstractFilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
+        AbstractFilterProperty.COLOR_SPACE.listName -> colorSpace = newValue as ColorSpace
         else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
     }
 

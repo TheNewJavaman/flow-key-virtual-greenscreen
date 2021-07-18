@@ -45,7 +45,7 @@ class OpenClSplashFilter @Suppress("LongParameterList") constructor(
         AbstractFilterProperty.TOLERANCE.listName -> percentTolerance = newValue as Float
         AbstractFilterProperty.REPLACEMENT_KEY.listName -> colorKey = newValue as ByteArray
         AbstractFilterProperty.COLOR_SPACE.listName -> colorSpace = newValue as ColorSpace
-        AbstractFilterProperty.BLOCK_SIZE.name -> blockSize = newValue as Int
+        AbstractFilterProperty.BLOCK_SIZE.listName -> blockSize = newValue as Int
         else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
     }
 

@@ -17,3 +17,5 @@ fun ByteArray.toBufferedImage(width: Int, height: Int): BufferedImage {
     System.arraycopy(this, 0, targetPixels, 0, size)
     return bufferedImage
 }
+
+fun Double.format(n: Int) = "%.${n}f".format(this)

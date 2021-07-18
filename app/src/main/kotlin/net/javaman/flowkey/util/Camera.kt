@@ -14,7 +14,7 @@ class Camera constructor(
     private val cameraId: Int = 0,
     val maxWidth: Int = DEFAULT_WIDTH_PIXELS,
     val maxHeight: Int = DEFAULT_HEIGHT_PIXELS,
-    private val threads: Int = 2
+    private val threads: Int = 1
 ) {
     private var timer: ScheduledExecutorService? = null
 
