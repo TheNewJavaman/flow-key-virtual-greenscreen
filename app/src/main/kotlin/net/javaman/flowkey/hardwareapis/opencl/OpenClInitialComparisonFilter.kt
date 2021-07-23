@@ -7,7 +7,9 @@ import net.javaman.flowkey.hardwareapis.common.AbstractFilterConsts
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
 import net.javaman.flowkey.hardwareapis.common.ColorSpace
 import net.javaman.flowkey.hardwareapis.opencl.OpenClApi.Companion.ClMemOperation
+import net.javaman.flowkey.util.DEFAULT_COLOR
 import net.javaman.flowkey.util.DEFAULT_HEIGHT_PIXELS
+import net.javaman.flowkey.util.DEFAULT_TOLERANCE
 import net.javaman.flowkey.util.DEFAULT_WIDTH_PIXELS
 import org.jocl.CL.*
 import org.jocl.Pointer
@@ -16,9 +18,9 @@ import kotlin.math.ceil
 
 class OpenClInitialComparisonFilter @Suppress("LongParameterList") constructor(
     private val api: OpenClApi,
-    var colorKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
-    var replacementKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
-    var percentTolerance: Float = 0.025f,
+    var colorKey: ByteArray = DEFAULT_COLOR,
+    var replacementKey: ByteArray = DEFAULT_COLOR,
+    var percentTolerance: Float = DEFAULT_TOLERANCE,
     var colorSpace: ColorSpace = ColorSpace.ALL,
     var width: Int = DEFAULT_WIDTH_PIXELS,
     var height: Int = DEFAULT_HEIGHT_PIXELS

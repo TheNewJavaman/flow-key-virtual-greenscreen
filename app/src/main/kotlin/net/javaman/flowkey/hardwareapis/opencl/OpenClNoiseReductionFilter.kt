@@ -7,6 +7,7 @@ import net.javaman.flowkey.hardwareapis.common.AbstractFilterConsts
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
 import net.javaman.flowkey.hardwareapis.opencl.OpenClApi.Companion.ClMemOperation
 import net.javaman.flowkey.util.COLOR_DEPTH
+import net.javaman.flowkey.util.DEFAULT_COLOR
 import net.javaman.flowkey.util.DEFAULT_HEIGHT_PIXELS
 import net.javaman.flowkey.util.DEFAULT_WIDTH_PIXELS
 import org.jocl.CL.*
@@ -17,7 +18,7 @@ import kotlin.math.ceil
 class OpenClNoiseReductionFilter @Suppress("LongParameterList") constructor(
     private val api: OpenClApi = OpenClApi(),
     var iterations: Int = 5,
-    var colorKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
+    var colorKey: ByteArray = DEFAULT_COLOR,
     var width: Int = DEFAULT_WIDTH_PIXELS,
     var height: Int = DEFAULT_HEIGHT_PIXELS,
     var templateBuffer: ByteArray = ByteArray(size = width * height * COLOR_DEPTH)
@@ -41,7 +42,6 @@ class OpenClNoiseReductionFilter @Suppress("LongParameterList") constructor(
 
     override fun apply(inputBuffer: ByteArray): ByteArray {
         var mutableInputBuffer = inputBuffer.clone()
-
         repeat(iterations) {
             val outputBuffer = ByteArray(size = mutableInputBuffer.size)
             val intOptionsBuffer = intArrayOf(0, width, height)

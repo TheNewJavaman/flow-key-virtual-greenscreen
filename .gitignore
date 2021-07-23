@@ -1,9 +1,11 @@
-/out/
+out
 *.log
-/*.jfr
-/.idea/
-/.vs/
-/ptx_out/
+*.jfr
+.idea
+.vs
+app/cuda_out
 .gradle
 build
 app/libs
+cmake-build-debug
+app/*.log

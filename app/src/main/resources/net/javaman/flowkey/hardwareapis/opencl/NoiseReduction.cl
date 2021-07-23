@@ -31,7 +31,7 @@ __kernel void noiseReductionKernel(
             if ((gid / 3) / width == height - 1) {
                 surroundingPixels += 1;
             } else {
-                surroundingPixels += checkPixelEquality(input, gid + (width * 3), colorKey);
+                surroundingPixels += checkPixelColorEquality(input, gid + (width * 3), colorKey);
             }
             if (surroundingPixels < 3) {
                 writePixel(output, gid, template, gid);

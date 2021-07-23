@@ -40,7 +40,7 @@ __kernel void flowKeyKernel(
             }
             if (
                 (gid / 3) / width != height - 1 &&
-                checkPixelEquality(input, gid + (width * 3), colorKey) == 1 &&
+                checkPixelColorEquality(input, gid + (width * 3), colorKey) == 1 &&
                 calcColorDiff(input, gid, template, gid + (width * 3), colorSpace) > gradientTolerance
             ) {
                 writePixel(output, gid, colorKey, 0);

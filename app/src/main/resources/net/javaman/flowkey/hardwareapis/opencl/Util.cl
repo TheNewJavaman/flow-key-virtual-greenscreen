@@ -17,7 +17,7 @@ enum IntOptions {
     BLOCK_SIZE = 3
 };
 
-int checkPixelEquality(
+int checkPixelColorEquality(
     const char *input, 
     const int i, 
     const char *colorKey

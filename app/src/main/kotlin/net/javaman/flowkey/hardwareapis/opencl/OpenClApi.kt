@@ -3,6 +3,7 @@
 package net.javaman.flowkey.hardwareapis.opencl
 
 import net.javaman.flowkey.hardwareapis.common.AbstractApi
+import net.javaman.flowkey.hardwareapis.common.AbstractApiConsts
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import org.jocl.*
 import org.jocl.CL.*
@@ -12,7 +13,7 @@ class OpenClApi constructor(
     deviceIndex: Int = 0,
     val localWorkSize: Long? = null
 ) : AbstractApi {
-    companion object : AbstractApi.AbstractApiConsts {
+    companion object : AbstractApiConsts {
         override val listName = "OpenCl"
 
         enum class ClMemOperation(val flags: Long) {

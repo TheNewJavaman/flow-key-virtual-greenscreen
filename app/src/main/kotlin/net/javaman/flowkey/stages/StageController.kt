@@ -20,7 +20,12 @@ import javafx.scene.layout.Pane
 import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
-import net.javaman.flowkey.hardwareapis.opencl.*
+import net.javaman.flowkey.hardwareapis.cuda.CudaApi
+import net.javaman.flowkey.hardwareapis.cuda.CudaFlowKeyFilter
+import net.javaman.flowkey.hardwareapis.cuda.CudaNoiseReductionFilter
+import net.javaman.flowkey.hardwareapis.opencl.OpenClFlowKeyFilter
+import net.javaman.flowkey.hardwareapis.opencl.OpenClNoiseReductionFilter
+import net.javaman.flowkey.hardwareapis.opencl.OpenClSplashFilter
 import net.javaman.flowkey.util.*
 import org.opencv.core.Mat
 
@@ -142,7 +147,7 @@ class StageController {
 
     private var camera: Camera? = null
 
-    var api: AbstractApi = OpenClApi()
+    var api: AbstractApi = CudaApi()
 
     private var initialBlockAvg: FloatArray? = null
 
@@ -167,27 +172,24 @@ class StageController {
 
     private fun onFrame(frame: Mat) {
         val originalFrameData = frame.toByteArray()
-        initialBlockAvg ?: run {
-            initialBlockAvg = OpenClSplashPrepFilter(api = api as OpenClApi).apply(originalFrameData)
-        }
         val tStart = System.nanoTime()
         var workingFrame = originalFrameData.clone()
         filters.forEach { filter ->
             when (filter) {
-                is OpenClNoiseReductionFilter -> {
-                    filter.apply {
-                        templateBuffer = originalFrameData
-                    }
+                is OpenClNoiseReductionFilter -> filter.apply {
+                    templateBuffer = originalFrameData
                 }
-                is OpenClFlowKeyFilter -> {
-                    filter.apply {
-                        templateBuffer = originalFrameData
-                    }
+                is OpenClFlowKeyFilter -> filter.apply {
+                    templateBuffer = originalFrameData
                 }
-                is OpenClSplashFilter -> {
-                    filter.apply {
-                        inputBlockAverageBuffer = initialBlockAvg!!
-                    }
+                is OpenClSplashFilter -> filter.apply {
+                    inputBlockAverageBuffer = initialBlockAvg!!
+                }
+                is CudaNoiseReductionFilter -> filter.apply {
+                    templateBuffer = originalFrameData
+                }
+                is CudaFlowKeyFilter -> filter.apply {
+                    templateBuffer = originalFrameData
                 }
             }
             workingFrame = filter.apply(workingFrame)
@@ -224,7 +226,7 @@ class StageController {
         if (camera?.cameraActive == true) {
             repeat(2) { startCamera(actionEvent) }
         }
-        api = OpenClApi()
+        api = CudaApi()
     }
 
     @FXML

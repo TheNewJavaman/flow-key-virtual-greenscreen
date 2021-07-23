@@ -7,9 +7,7 @@ import net.javaman.flowkey.hardwareapis.common.AbstractFilterConsts
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
 import net.javaman.flowkey.hardwareapis.common.ColorSpace
 import net.javaman.flowkey.hardwareapis.opencl.OpenClApi.Companion.ClMemOperation
-import net.javaman.flowkey.util.COLOR_DEPTH
-import net.javaman.flowkey.util.DEFAULT_HEIGHT_PIXELS
-import net.javaman.flowkey.util.DEFAULT_WIDTH_PIXELS
+import net.javaman.flowkey.util.*
 import org.jocl.CL.*
 import org.jocl.Pointer
 import org.jocl.Sizeof
@@ -18,8 +16,8 @@ import kotlin.math.ceil
 class OpenClFlowKeyFilter @Suppress("LongParameterList") constructor(
     private val api: OpenClApi = OpenClApi(),
     var iterations: Int = 3,
-    var colorKey: ByteArray = byteArrayOf(0, 255.toByte(), 0),
-    var gradientTolerance: Float = 0.025f,
+    var colorKey: ByteArray = DEFAULT_COLOR,
+    var gradientTolerance: Float = DEFAULT_TOLERANCE,
     var colorSpace: ColorSpace = ColorSpace.ALL,
     var width: Int = DEFAULT_WIDTH_PIXELS,
     var height: Int = DEFAULT_HEIGHT_PIXELS,

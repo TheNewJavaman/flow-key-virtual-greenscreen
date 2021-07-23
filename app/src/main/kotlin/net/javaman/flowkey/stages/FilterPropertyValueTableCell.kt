@@ -62,7 +62,7 @@ class FilterPropertyValueTableCell<T> : TableCell<Pair<AbstractFilterProperty, A
     }
 
     private fun setIntProperty(data: Pair<AbstractFilterProperty, Any>) {
-        val intSpinner = Spinner<Int>(0, Int.MAX_VALUE, 0, INT_STEP)
+        val intSpinner = Spinner<Int>(INT_STEP, Int.MAX_VALUE, INT_STEP, INT_STEP)
         val controller = FlowKeyApplication.controller
         val selectedId = controller.filtersListView.selectionModel.selectedItem.id.toInt()
         intSpinner.valueFactory.value = data.second as Int
@@ -77,7 +77,7 @@ class FilterPropertyValueTableCell<T> : TableCell<Pair<AbstractFilterProperty, A
     }
 
     private fun setFloatProperty(data: Pair<AbstractFilterProperty, Any>) {
-        val doubleSpinner = Spinner<Double>(0.0, 1.0, 0.0, FLOAT_STEP)
+        val doubleSpinner = Spinner<Double>(FLOAT_STEP, 1.0, FLOAT_STEP, FLOAT_STEP)
         doubleSpinner.valueFactory.converter = DoubleConverter()
         val controller = FlowKeyApplication.controller
         val selectedId = controller.filtersListView.selectionModel.selectedItem.id.toInt()
@@ -122,7 +122,7 @@ class FilterPropertyValueTableCell<T> : TableCell<Pair<AbstractFilterProperty, A
         val controller = FlowKeyApplication.controller
         val selectedId = controller.filtersListView.selectionModel.selectedItem.id.toInt()
         colorOption.selectionModel.select((data.second as ColorSpace).listName)
-        colorOption.setOnAction { _ ->
+        colorOption.setOnAction {
             controller.filters[selectedId].setProperty(
                 data.first.listName,
                 ColorSpace.valueOf(colorOption.selectionModel.selectedItem.uppercase(Locale.getDefault()))
