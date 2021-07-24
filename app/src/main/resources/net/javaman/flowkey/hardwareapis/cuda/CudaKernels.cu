@@ -27,9 +27,7 @@ __device__ float calcColorDiff(
 ) {
     int colorDiff[3];
     for (int k = 0; k < 3; k++) {
-        unsigned char c = a[i + k];
-        unsigned char d = b[j + k];
-        colorDiff[k] = (c > d) ? c - d : d - c;
+        colorDiff[k] = abs(a[i + k] - b[j + k]);
     }
     if (colorSpace < ALL) {
         return colorDiff[colorSpace];
