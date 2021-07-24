@@ -11,7 +11,7 @@ __device__ int checkPixelColorEquality(
         unsigned char *colorKey
 ) {
     for (int j = 0; j < 3; j++) {
-        if (input[i + j] - colorKey[j] != 0) {
+        if (input[i + j] != colorKey[j]) {
             return 0;
         }
     }
