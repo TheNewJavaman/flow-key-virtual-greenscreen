@@ -17,6 +17,7 @@ import javafx.scene.image.ImageView
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
+import mu.KotlinLogging
 import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
@@ -28,6 +29,8 @@ import net.javaman.flowkey.hardwareapis.opencl.OpenClNoiseReductionFilter
 import net.javaman.flowkey.hardwareapis.opencl.OpenClSplashFilter
 import net.javaman.flowkey.util.*
 import org.opencv.core.Mat
+
+val logger = KotlinLogging.logger {}
 
 @Suppress("TooManyFunctions")
 class StageController {
@@ -174,25 +177,29 @@ class StageController {
         val originalFrameData = frame.toByteArray()
         val tStart = System.nanoTime()
         var workingFrame = originalFrameData.clone()
-        filters.forEach { filter ->
-            when (filter) {
-                is OpenClNoiseReductionFilter -> filter.apply {
-                    templateBuffer = originalFrameData
+        try {
+            filters.forEach { filter ->
+                when (filter) {
+                    is OpenClNoiseReductionFilter -> filter.apply {
+                        templateBuffer = originalFrameData
+                    }
+                    is OpenClFlowKeyFilter -> filter.apply {
+                        templateBuffer = originalFrameData
+                    }
+                    is OpenClSplashFilter -> filter.apply {
+                        inputBlockAverageBuffer = initialBlockAvg!!
+                    }
+                    is CudaNoiseReductionFilter -> filter.apply {
+                        templateBuffer = originalFrameData
+                    }
+                    is CudaFlowKeyFilter -> filter.apply {
+                        templateBuffer = originalFrameData
+                    }
                 }
-                is OpenClFlowKeyFilter -> filter.apply {
-                    templateBuffer = originalFrameData
-                }
-                is OpenClSplashFilter -> filter.apply {
-                    inputBlockAverageBuffer = initialBlockAvg!!
-                }
-                is CudaNoiseReductionFilter -> filter.apply {
-                    templateBuffer = originalFrameData
-                }
-                is CudaFlowKeyFilter -> filter.apply {
-                    templateBuffer = originalFrameData
-                }
+                workingFrame = filter.apply(workingFrame)
             }
-            workingFrame = filter.apply(workingFrame)
+        } catch (e: ConcurrentModificationException) {
+            logger.warn { "A filter was likely changed, resulting in an out-of-sync filter list" }
         }
         val tEnd = System.nanoTime()
         if (tEnd - lastInstant > LATENCY_COUNTER_DELAY_NS) {

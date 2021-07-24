@@ -22,7 +22,7 @@ class FilterPropertyValueTableCell<T> : TableCell<Pair<AbstractFilterProperty, A
     companion object {
         const val INT_STEP = 1
 
-        const val FLOAT_STEP = 0.005
+        const val FLOAT_STEP = 0.001
 
         const val WIDTH_PIXELS = 100.0
     }
@@ -61,10 +61,11 @@ class FilterPropertyValueTableCell<T> : TableCell<Pair<AbstractFilterProperty, A
     }
 
     private fun setIntProperty(data: Pair<AbstractFilterProperty, Any>) {
-        val intSpinner = Spinner<Int>(INT_STEP, Int.MAX_VALUE, INT_STEP, INT_STEP)
+        val intSpinner = Spinner<Int>(0, Int.MAX_VALUE, INT_STEP, INT_STEP)
         val controller = FlowKeyApplication.controller
         val selectedId = controller.filtersListView.selectionModel.selectedItem.id.toInt()
         intSpinner.valueFactory.value = data.second as Int
+        intSpinner.isEditable = true
         intSpinner.editor.textProperty().addListener { _, _, _ ->
             controller.filters[selectedId].setProperty(data.first.listName, intSpinner.valueFactory.value)
         }
@@ -76,11 +77,12 @@ class FilterPropertyValueTableCell<T> : TableCell<Pair<AbstractFilterProperty, A
     }
 
     private fun setFloatProperty(data: Pair<AbstractFilterProperty, Any>) {
-        val doubleSpinner = Spinner<Double>(FLOAT_STEP, 1.0, FLOAT_STEP, FLOAT_STEP)
+        val doubleSpinner = Spinner<Double>(0.0, 1.0, FLOAT_STEP, FLOAT_STEP)
         doubleSpinner.valueFactory.converter = DoubleConverter()
         val controller = FlowKeyApplication.controller
         val selectedId = controller.filtersListView.selectionModel.selectedItem.id.toInt()
         doubleSpinner.valueFactory.value = (data.second as Float).toDouble()
+        doubleSpinner.isEditable = true
         doubleSpinner.editor.textProperty().addListener { _, _, _ ->
             controller.filters[selectedId].setProperty(
                 data.first.listName,

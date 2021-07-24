@@ -50,6 +50,10 @@ class CudaFlowKeyFilter constructor(
     }
 
     override fun apply(inputBuffer: ByteArray): ByteArray {
+        if (iterations == 0) {
+            return inputBuffer
+        }
+
         cuCtxSetCurrent(api.context)
 
         val inputPtr = api.allocMem(Sizeof.BYTE * inputBuffer.size.toLong(), Pointer.to(inputBuffer))

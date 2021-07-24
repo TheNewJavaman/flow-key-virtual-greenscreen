@@ -10,9 +10,12 @@ import jcuda.driver.JCudaDriver.*
 import jcuda.nvrtc.JNvrtc
 import jcuda.nvrtc.JNvrtc.*
 import jcuda.nvrtc.nvrtcProgram
+import mu.KotlinLogging
 import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractApiConsts
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
+
+val logger = KotlinLogging.logger {}
 
 class CudaApi : AbstractApi {
     companion object : AbstractApiConsts {
@@ -30,6 +33,8 @@ class CudaApi : AbstractApi {
     val noiseReductionProgram: CUfunction
 
     val flowKeyProgram: CUfunction
+
+    val gapFillerProgram: CUfunction
 
     val context: CUcontext
 
@@ -52,7 +57,10 @@ class CudaApi : AbstractApi {
 
         val programLog = arrayOfNulls<String>(1)
         nvrtcGetProgramLog(program, programLog)
-        println(programLog[0])
+        when (val output = programLog[0]) {
+            "" -> logger.info { "Cuda program compiled without output" }
+            else -> logger.info { "Cuda program compiled with the following output:\n${output}" }
+        }
 
         val ptx = arrayOfNulls<String>(1)
         nvrtcGetPTX(program, ptx)
@@ -80,18 +88,22 @@ class CudaApi : AbstractApi {
         cuModuleGetFunction(noiseReductionProgram, module, "noiseReductionKernel")
         flowKeyProgram = CUfunction()
         cuModuleGetFunction(flowKeyProgram, module, "flowKeyKernel")
+        gapFillerProgram = CUfunction()
+        cuModuleGetFunction(gapFillerProgram, module, "gapFillerKernel")
 
-        cuCtxSetLimit(CUlimit.CU_LIMIT_PRINTF_FIFO_SIZE, STDOUT_BUFFER_SIZE);
+        cuCtxSetLimit(CUlimit.CU_LIMIT_PRINTF_FIFO_SIZE, STDOUT_BUFFER_SIZE)
     }
 
     override fun getFilters(): Map<String, AbstractFilter> = mapOf(
         CudaInitialComparisonFilter.listName to CudaInitialComparisonFilter(api = this),
         CudaNoiseReductionFilter.listName to CudaNoiseReductionFilter(api = this),
-        CudaFlowKeyFilter.listName to CudaFlowKeyFilter(api = this)
+        CudaFlowKeyFilter.listName to CudaFlowKeyFilter(api = this),
+        CudaGapFillerFilter.listName to CudaGapFillerFilter(api = this)
     )
 
     @Suppress("EmptyFunctionBlock")
-    override fun close() {}
+    override fun close() {
+    }
 
     fun allocMem(size: Long, hostPtr: Pointer? = null): CUdeviceptr {
         val devicePtr = CUdeviceptr()

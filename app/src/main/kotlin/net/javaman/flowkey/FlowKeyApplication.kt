@@ -9,6 +9,7 @@ import javafx.scene.control.MenuItem
 import javafx.scene.layout.GridPane
 import javafx.scene.text.TextAlignment
 import javafx.stage.Stage
+import mu.KotlinLogging
 import net.javaman.flowkey.stages.FilterPropertyNameTableCell
 import net.javaman.flowkey.stages.FilterPropertyValueTableCell
 import net.javaman.flowkey.stages.StageController
@@ -16,6 +17,7 @@ import org.opencv.core.Core
 import java.util.*
 import kotlin.system.exitProcess
 
+val logger = KotlinLogging.logger {}
 
 class FlowKeyApplication : Application() {
     companion object {
@@ -31,6 +33,7 @@ class FlowKeyApplication : Application() {
 
         @JvmStatic
         fun main(args: Array<String>) {
+            logger.info { "Starting Flow Key application..." }
             System.loadLibrary(Core.NATIVE_LIBRARY_NAME)
             val properties = Properties()
             properties.load(this::class.java.getResourceAsStream("application.properties"))

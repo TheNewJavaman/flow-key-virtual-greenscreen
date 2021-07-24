@@ -10,17 +10,12 @@ __device__ int checkPixelColorEquality(
         int i,
         unsigned char *colorKey
 ) {
-    int diffSum = 0;
     for (int j = 0; j < 3; j++) {
-        unsigned char a = input[i + j];
-        unsigned char b = colorKey[j];
-        diffSum += (a > b) ? a - b : b - a;
+        if (input[i + j] - colorKey[j] != 0) {
+            return 0;
+        }
     }
-    if (diffSum == 0) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return 1;
 }
 
 __device__ float calcColorDiff(
@@ -92,38 +87,38 @@ extern "C" __global__ void noiseReductionWorkerKernel(
         unsigned char *input,
         unsigned char *output,
         unsigned char *original,
-        unsigned char *colorKey,
+        unsigned char *replacementKey,
         int width,
         int height
 ) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < n && idx % 3 == 0) {
-        if (checkPixelColorEquality(input, idx, colorKey) == 1) {
+        if (checkPixelColorEquality(input, idx, replacementKey) == 1) {
             int surroundingPixels = 0;
             if ((idx / 3) % width == 0) {
                 surroundingPixels += 1;
             } else {
-                surroundingPixels += checkPixelColorEquality(input, idx - 3, colorKey);
+                surroundingPixels += checkPixelColorEquality(input, idx - 3, replacementKey);
             }
             if ((idx / 3) % width == width - 1) {
                 surroundingPixels += 1;
             } else {
-                surroundingPixels += checkPixelColorEquality(input, idx + 3, colorKey);
+                surroundingPixels += checkPixelColorEquality(input, idx + 3, replacementKey);
             }
             if ((idx / 3) / width == 0) {
                 surroundingPixels += 1;
             } else {
-                surroundingPixels += checkPixelColorEquality(input, idx - (width * 3), colorKey);
+                surroundingPixels += checkPixelColorEquality(input, idx - (width * 3), replacementKey);
             }
             if ((idx / 3) / width == height - 1) {
                 surroundingPixels += 1;
             } else {
-                surroundingPixels += checkPixelColorEquality(input, idx + (width * 3), colorKey);
+                surroundingPixels += checkPixelColorEquality(input, idx + (width * 3), replacementKey);
             }
-            if (surroundingPixels < 4) {
+            if (surroundingPixels < 3) {
                 writePixel(output, idx, original, idx);
             } else {
-                writePixel(output, idx, colorKey, 0);
+                writePixel(output, idx, replacementKey, 0);
             }
         } else {
             writePixel(output, idx, original, idx);
@@ -136,7 +131,7 @@ extern "C" __global__ void noiseReductionKernel(
         unsigned char *input,
         unsigned char *output,
         unsigned char *original,
-        unsigned char *colorKey,
+        unsigned char *replacementKey,
         int width,
         int height,
         int iterations,
@@ -151,7 +146,7 @@ extern "C" __global__ void noiseReductionKernel(
                     input,
                     output,
                     original,
-                    colorKey,
+                    replacementKey,
                     width,
                     height
             );
@@ -237,5 +232,69 @@ extern "C" __global__ void flowKeyKernel(
             cudaDeviceSynchronize();
             swapCharArrays(input, output);
         }
+    }
+}
+
+extern "C" __global__ void gapFillerWorkerKernel(
+        int n,
+        unsigned char *input,
+        unsigned char *output,
+        unsigned char *replacementKey,
+        int width,
+        int height
+) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < n && idx % 3 == 0) {
+        if (checkPixelColorEquality(input, idx, replacementKey) == 0) {
+            int surroundingPixels = 0;
+            if ((idx / 3) % width != 0) {
+                surroundingPixels += checkPixelColorEquality(input, idx - 3, replacementKey);
+            }
+            if ((idx / 3) % width == width - 1) {
+                surroundingPixels += checkPixelColorEquality(input, idx + 3, replacementKey);
+            }
+            if ((idx / 3) / width != 0) {
+                surroundingPixels += checkPixelColorEquality(input, idx - (width * 3), replacementKey);
+            }
+            if ((idx / 3) / width != height - 1) {
+                surroundingPixels += checkPixelColorEquality(input, idx + (width * 3), replacementKey);
+            }
+            if (surroundingPixels > 1) {
+                writePixel(output, idx, replacementKey, 0);
+            } else {
+                writePixel(output, idx, input, idx);
+            }
+        } else {
+            writePixel(output, idx, replacementKey, 0);
+        }
+    }
+}
+
+extern "C" __global__ void gapFillerKernel(
+        int n,
+        unsigned char *input,
+        unsigned char *output,
+        unsigned char *replacementKey,
+        int width,
+        int height,
+        int iterations,
+        int blockSize,
+        int gridSize
+) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx == 0) {
+        for (int i = 0; i < iterations; i++) {
+            gapFillerWorkerKernel<<<gridSize, blockSize>>>(
+                    n,
+                    input,
+                    output,
+                    replacementKey,
+                    width,
+                    height
+            );
+            cudaDeviceSynchronize();
+            swapCharArrays(input, output);
+        }
+        swapCharArrays(input, output);
     }
 }

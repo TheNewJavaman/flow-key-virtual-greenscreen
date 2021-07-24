@@ -14,14 +14,12 @@ import net.javaman.flowkey.util.DEFAULT_ITERATIONS
 import net.javaman.flowkey.util.DEFAULT_WIDTH_PIXELS
 import kotlin.math.ceil
 
-class CudaNoiseReductionFilter constructor(
+class CudaGapFillerFilter constructor(
     private val api: CudaApi
 ) : AbstractFilter {
     companion object : AbstractFilterConsts {
-        override val listName = "Noise Reduction"
+        override val listName = "Gap Filler"
     }
-
-    lateinit var templateBuffer: ByteArray
 
     private var replacementKey = DEFAULT_COLOR
 
@@ -51,7 +49,6 @@ class CudaNoiseReductionFilter constructor(
 
         val inputPtr = api.allocMem(Sizeof.BYTE * inputBuffer.size.toLong(), Pointer.to(inputBuffer))
         val outputPtr = api.allocMem(Sizeof.BYTE * inputBuffer.size.toLong())
-        val templatePtr = api.allocMem(Sizeof.BYTE * templateBuffer.size.toLong(), Pointer.to(templateBuffer))
         val replacementKeyPtr = api.allocMem(Sizeof.BYTE * replacementKey.size.toLong(), Pointer.to(replacementKey))
 
         val gridSize = ceil(inputBuffer.size / CudaApi.BLOCK_SIZE.toDouble()).toInt()
@@ -59,7 +56,6 @@ class CudaNoiseReductionFilter constructor(
             Pointer.to(intArrayOf(inputBuffer.size)),
             Pointer.to(inputPtr),
             Pointer.to(outputPtr),
-            Pointer.to(templatePtr),
             Pointer.to(replacementKeyPtr),
             Pointer.to(intArrayOf(width)),
             Pointer.to(intArrayOf(height)),
@@ -69,7 +65,7 @@ class CudaNoiseReductionFilter constructor(
         )
 
         cuLaunchKernel(
-            api.noiseReductionProgram,
+            api.gapFillerProgram,
             1, 1, 1,
             CudaApi.BLOCK_SIZE, 1, 1,
             0, null,
@@ -82,7 +78,6 @@ class CudaNoiseReductionFilter constructor(
 
         cuMemFree(inputPtr)
         cuMemFree(outputPtr)
-        cuMemFree(templatePtr)
         cuMemFree(replacementKeyPtr)
 
         return outputBuffer
