@@ -19,6 +19,10 @@ class CudaApi : AbstractApi {
         override val listName = "Cuda"
 
         const val KERNELS_FILE = "CudaKernels.cu"
+
+        const val BLOCK_SIZE = 256
+
+        const val STDOUT_BUFFER_SIZE = 4096L
     }
 
     val initialComparisonProgram: CUfunction
@@ -26,8 +30,6 @@ class CudaApi : AbstractApi {
     val noiseReductionProgram: CUfunction
 
     val flowKeyProgram: CUfunction
-
-    val blockSize = 256
 
     val context: CUcontext
 
@@ -79,7 +81,7 @@ class CudaApi : AbstractApi {
         flowKeyProgram = CUfunction()
         cuModuleGetFunction(flowKeyProgram, module, "flowKeyKernel")
 
-        cuCtxSetLimit(CUlimit.CU_LIMIT_PRINTF_FIFO_SIZE, 4096);
+        cuCtxSetLimit(CUlimit.CU_LIMIT_PRINTF_FIFO_SIZE, STDOUT_BUFFER_SIZE);
     }
 
     override fun getFilters(): Map<String, AbstractFilter> = mapOf(
@@ -88,6 +90,7 @@ class CudaApi : AbstractApi {
         CudaFlowKeyFilter.listName to CudaFlowKeyFilter(api = this)
     )
 
+    @Suppress("EmptyFunctionBlock")
     override fun close() {}
 
     fun allocMem(size: Long, hostPtr: Pointer? = null): CUdeviceptr {

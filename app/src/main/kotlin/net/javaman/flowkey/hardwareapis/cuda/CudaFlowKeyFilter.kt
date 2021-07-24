@@ -1,3 +1,5 @@
+@file:Suppress("WildcardImport")
+
 package net.javaman.flowkey.hardwareapis.cuda
 
 import jcuda.Pointer
@@ -55,26 +57,26 @@ class CudaFlowKeyFilter constructor(
         val templatePtr = api.allocMem(Sizeof.BYTE * templateBuffer.size.toLong(), Pointer.to(templateBuffer))
         val replacementKeyPtr = api.allocMem(Sizeof.BYTE * replacementKey.size.toLong(), Pointer.to(replacementKey))
 
-        val gridSize = ceil(inputBuffer.size / api.blockSize.toDouble()).toInt()
+        val gridSize = ceil(inputBuffer.size / CudaApi.BLOCK_SIZE.toDouble()).toInt()
         val kernelParams = Pointer.to(
             Pointer.to(intArrayOf(inputBuffer.size)),
             Pointer.to(inputPtr),
             Pointer.to(outputPtr),
             Pointer.to(templatePtr),
             Pointer.to(replacementKeyPtr),
-            Pointer.to(floatArrayOf(tolerance)),
+            Pointer.to(intArrayOf((tolerance * PIXEL_MULTIPLIER).toInt())),
             Pointer.to(intArrayOf(colorSpace.i)),
             Pointer.to(intArrayOf(width)),
             Pointer.to(intArrayOf(height)),
             Pointer.to(intArrayOf(iterations)),
-            Pointer.to(intArrayOf(api.blockSize)),
+            Pointer.to(intArrayOf(CudaApi.BLOCK_SIZE)),
             Pointer.to(intArrayOf(gridSize))
         )
 
         JCudaDriver.cuLaunchKernel(
             api.flowKeyProgram,
             1, 1, 1,
-            api.blockSize, 1, 1,
+            CudaApi.BLOCK_SIZE, 1, 1,
             0, null,
             kernelParams, null
         )

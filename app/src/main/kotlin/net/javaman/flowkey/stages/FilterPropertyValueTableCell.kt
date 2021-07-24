@@ -16,7 +16,6 @@ import net.javaman.flowkey.hardwareapis.common.ColorSpace
 import net.javaman.flowkey.util.PIXEL_MULTIPLIER
 import java.text.DecimalFormat
 import java.util.*
-import kotlin.math.abs
 
 
 class FilterPropertyValueTableCell<T> : TableCell<Pair<AbstractFilterProperty, Any>, T>() {
@@ -99,7 +98,7 @@ class FilterPropertyValueTableCell<T> : TableCell<Pair<AbstractFilterProperty, A
     }
 
     private fun setColorProperty(data: Pair<AbstractFilterProperty, Any>) {
-        val originalColor = (data.second as ByteArray).map { abs(it.toDouble()) }
+        val originalColor = (data.second as ByteArray).map { it.toUByte().toInt() / PIXEL_MULTIPLIER.toDouble() }
         val colorPicker = ColorPicker(Color.color(originalColor[2], originalColor[1], originalColor[0]))
         val controller = FlowKeyApplication.controller
         val selectedId = controller.filtersListView.selectionModel.selectedItem.id.toInt()

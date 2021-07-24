@@ -6,13 +6,15 @@ enum ColorSpace {
 };
 
 __device__ int checkPixelColorEquality(
-        char *input,
+        unsigned char *input,
         int i,
-        char *colorKey
+        unsigned char *colorKey
 ) {
     int diffSum = 0;
     for (int j = 0; j < 3; j++) {
-        diffSum += abs(input[i + j] - colorKey[j]);
+        unsigned char a = input[i + j];
+        unsigned char b = colorKey[j];
+        diffSum += (a > b) ? a - b : b - a;
     }
     if (diffSum == 0) {
         return 1;
@@ -22,15 +24,17 @@ __device__ int checkPixelColorEquality(
 }
 
 __device__ float calcColorDiff(
-        char *a,
+        unsigned char *a,
         int i,
-        char *b,
+        unsigned char *b,
         int j,
         int colorSpace
 ) {
     int colorDiff[3];
     for (int k = 0; k < 3; k++) {
-        colorDiff[k] = abs(a[i + k] - b[j + k]);
+        unsigned char c = a[i + k];
+        unsigned char d = b[j + k];
+        colorDiff[k] = (c > d) ? c - d : d - c;
     }
     if (colorSpace < ALL) {
         return colorDiff[colorSpace];
@@ -39,14 +43,14 @@ __device__ float calcColorDiff(
         for (int k = 0; k < 3; k++) {
             sum += colorDiff[k];
         }
-        return sum;
+        return sum / 3;
     }
 }
 
 __device__ void writePixel(
-        char *canvas,
+        unsigned char *canvas,
         int i,
-        char *ink,
+        unsigned char *ink,
         int j
 ) {
     for (int k = 0; k < 3; k++) {
@@ -55,20 +59,20 @@ __device__ void writePixel(
 }
 
 __device__ void swapCharArrays(
-        char *&a,
-        char *&b
+        unsigned char *&a,
+        unsigned char *&b
 ) {
-    char *tmp = a;
+    unsigned char *tmp = a;
     a = b;
     b = tmp;
 }
 
 extern "C" __global__ void initialComparisonKernel(
         int n,
-        char *input,
-        char *output,
-        char *colorKey,
-        char *replacementKey,
+        unsigned char *input,
+        unsigned char *output,
+        unsigned char *colorKey,
+        unsigned char *replacementKey,
         int tolerance,
         int colorSpace
 ) {
@@ -85,10 +89,10 @@ extern "C" __global__ void initialComparisonKernel(
 
 extern "C" __global__ void noiseReductionWorkerKernel(
         int n,
-        char *input,
-        char *output,
-        char *original,
-        char *colorKey,
+        unsigned char *input,
+        unsigned char *output,
+        unsigned char *original,
+        unsigned char *colorKey,
         int width,
         int height
 ) {
@@ -129,10 +133,10 @@ extern "C" __global__ void noiseReductionWorkerKernel(
 
 extern "C" __global__ void noiseReductionKernel(
         int n,
-        char *input,
-        char *output,
-        char *original,
-        char *colorKey,
+        unsigned char *input,
+        unsigned char *output,
+        unsigned char *original,
+        unsigned char *colorKey,
         int width,
         int height,
         int iterations,
@@ -141,7 +145,6 @@ extern "C" __global__ void noiseReductionKernel(
 ) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx == 0) {
-        printf("%d\n", colorKey[1]);
         for (int i = 0; i < iterations; i++) {
             noiseReductionWorkerKernel<<<gridSize, blockSize>>>(
                     n,
@@ -160,11 +163,11 @@ extern "C" __global__ void noiseReductionKernel(
 
 extern "C" __global__ void flowKeyWorkerKernel(
         int n,
-        char *input,
-        char *output,
-        char *original,
-        char *replacementKey,
-        float tolerance,
+        unsigned char *input,
+        unsigned char *output,
+        unsigned char *original,
+        unsigned char *replacementKey,
+        int tolerance,
         int colorSpace,
         int width,
         int height
@@ -205,11 +208,11 @@ extern "C" __global__ void flowKeyWorkerKernel(
 
 extern "C" __global__ void flowKeyKernel(
         int n,
-        char *input,
-        char *output,
-        char *original,
-        char *replacementKey,
-        float tolerance,
+        unsigned char *input,
+        unsigned char *output,
+        unsigned char *original,
+        unsigned char *replacementKey,
+        int tolerance,
         int colorSpace,
         int width,
         int height,

@@ -11,6 +11,7 @@ import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
 import net.javaman.flowkey.hardwareapis.common.ColorSpace
 import net.javaman.flowkey.util.DEFAULT_COLOR
 import net.javaman.flowkey.util.DEFAULT_TOLERANCE
+import net.javaman.flowkey.util.PIXEL_MULTIPLIER
 import kotlin.math.ceil
 
 class CudaInitialComparisonFilter constructor(
@@ -57,15 +58,15 @@ class CudaInitialComparisonFilter constructor(
             Pointer.to(outputPtr),
             Pointer.to(colorKeyPtr),
             Pointer.to(replacementKeyPtr),
-            Pointer.to(intArrayOf((percentTolerance * 255).toInt())),
+            Pointer.to(intArrayOf((percentTolerance * PIXEL_MULTIPLIER).toInt())),
             Pointer.to(intArrayOf(colorSpace.i))
         )
 
-        val gridSize = ceil(inputBuffer.size / api.blockSize.toDouble()).toInt()
+        val gridSize = ceil(inputBuffer.size / CudaApi.BLOCK_SIZE.toDouble()).toInt()
         cuLaunchKernel(
             api.initialComparisonProgram,
             gridSize, 1, 1,
-            api.blockSize, 1, 1,
+            CudaApi.BLOCK_SIZE, 1, 1,
             0, null,
             kernelParams, null
         )
