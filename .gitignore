@@ -1,11 +1,8 @@
-out
-*.log
-*.jfr
+.gradle
 .idea
 .vs
-app/cuda_out
-.gradle
 build
-app/libs
 cmake-build-debug
-app/*.log
+app/libs
+*.log
+*.jfr
