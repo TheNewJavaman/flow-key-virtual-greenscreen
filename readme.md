@@ -47,13 +47,38 @@ custom static color.
 
 ## Filter Flow
 
-There are several implemented filters:
+There are several implemented filters. The descriptions below are a planned expansion of the pipeline. Currently, each
+filter operates on a full RGB image, but the plan is to move to binary "is this a greenscreen? y/n" bitmaps.
 
 - `InitialComparison`: Generic greenscreen filter; checks if pixels are close to a specified color key, then writes a
   replacement color to those pixels
+    - In: `original`: Original frame in RGB pixels
+    - In: `colorKey`: Color to compare against
+    - In: `replacementKey`: Color to replace with greenscreen
+    - In: `tolerance`: Int in [0,255] to show the maximum difference that a greenscreen pixel can have from an original
+      pixel
+    - Out: `output`: Bitmap that identifies pixels as either 1/true/greenscreen or 0/false/original
 - `NoiseReduction`: Identifies greenscreen pixels that aren't surrounded by many other greenscreen pixels, then writes
   the original color to those pixels
+    - In: `input`: Input binary bitmap that shows where discovered greenscreen pixels are
+    - In: `width`: Width of the image
+    - In: `height`: Height of the image
+    - Out: `output`: Binary bitmap that shows where the greenscreen pixels are
 - `FlowKey`: Identifies pixels that are close to greenscreen pixels, then writes a replacement color to those pixels if
   they are close
+    - In: `input`: Input binary bitmap
+    - In: `original`: Original frame
+    - In: `replacementKey`: Color to replace with greenscreen
+    - In: `tolerance`: Int in [0,255] to show maximum difference
+    - In: `width`: Width of the image
+    - In: `height`: Height of the image
+    - Out: `output`: Output binary bitmap
+- `GapFiller`: Fills in the gaps between greenscreen pixels; the inverse of `NoiseReduction`
+    - In: `input`: Input binary bitmap
+    - In: `width`: Width of the image
+    - In: `height`: Height of the image
+    - Out: `output`: Output binary bitmap
 - `Splash`: Compares an original image to a new image, then replaces stale pixels with a replacement color
+    - WIP; will focus on this later
 - `SplashPrep`: Generates a block map of average pixel values
+    - WIP; will focus on this later
