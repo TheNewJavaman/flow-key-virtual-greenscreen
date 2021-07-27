@@ -1,10 +1,3 @@
-enum ColorSpace {
-    BLUE = 0,
-    GREEN = 1,
-    RED = 2,
-    ALL = 3
-};
-
 __device__ int checkPixelColorEquality(
         unsigned char *input,
         int i,
@@ -22,22 +15,13 @@ __device__ float calcColorDiff(
         unsigned char *a,
         int i,
         unsigned char *b,
-        int j,
-        int colorSpace
+        int j
 ) {
-    int colorDiff[3];
+    int sum = 0;
     for (int k = 0; k < 3; k++) {
-        colorDiff[k] = abs(a[i + k] - b[j + k]);
+        sum += abs(a[i + k] - b[j + k]);
     }
-    if (colorSpace < ALL) {
-        return colorDiff[colorSpace];
-    } else {
-        int sum = 0;
-        for (int k = 0; k < 3; k++) {
-            sum += colorDiff[k];
-        }
-        return sum / 3;
-    }
+    return sum / 3;
 }
 
 __device__ void writePixel(
@@ -66,12 +50,11 @@ extern "C" __global__ void initialComparisonKernel(
         unsigned char *output,
         unsigned char *colorKey,
         unsigned char *replacementKey,
-        int tolerance,
-        int colorSpace
+        int tolerance
 ) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < n && idx % 3 == 0) {
-        int diff = calcColorDiff(input, idx, colorKey, 0, colorSpace);
+        int diff = calcColorDiff(input, idx, colorKey, 0);
         if (diff < tolerance) {
             writePixel(output, idx, replacementKey, 0);
         } else {
@@ -161,7 +144,6 @@ extern "C" __global__ void flowKeyWorkerKernel(
         unsigned char *original,
         unsigned char *replacementKey,
         int tolerance,
-        int colorSpace,
         int width,
         int height
 ) {
@@ -170,25 +152,25 @@ extern "C" __global__ void flowKeyWorkerKernel(
         if (checkPixelColorEquality(input, idx, replacementKey) == 0) {
             if ((idx / 3) % width != 0 &&
                 checkPixelColorEquality(input, idx - 3, replacementKey) &&
-                calcColorDiff(input, idx, original, idx - 3, colorSpace) < tolerance) {
+                calcColorDiff(input, idx, original, idx - 3) < tolerance) {
                 writePixel(output, idx, replacementKey, 0);
                 return;
             }
             if ((idx / 3) % width != width - 1 &&
                 checkPixelColorEquality(input, idx + 3, replacementKey) == 1 &&
-                calcColorDiff(input, idx, original, idx + 3, colorSpace) < tolerance) {
+                calcColorDiff(input, idx, original, idx + 3) < tolerance) {
                 writePixel(output, idx, replacementKey, 0);
                 return;
             }
             if ((idx / 3) / width != 0 &&
                 checkPixelColorEquality(input, idx - (width * 3), replacementKey) == 1 &&
-                calcColorDiff(input, idx, original, idx - (width * 3), colorSpace) < tolerance) {
+                calcColorDiff(input, idx, original, idx - (width * 3)) < tolerance) {
                 writePixel(output, idx, replacementKey, 0);
                 return;
             }
             if ((idx / 3) / width != height - 1 &&
                 checkPixelColorEquality(input, idx + (width * 3), replacementKey) == 1 &&
-                calcColorDiff(input, idx, original, idx + (width * 3), colorSpace) < tolerance) {
+                calcColorDiff(input, idx, original, idx + (width * 3)) < tolerance) {
                 writePixel(output, idx, replacementKey, 0);
                 return;
             }
@@ -206,7 +188,6 @@ extern "C" __global__ void flowKeyKernel(
         unsigned char *original,
         unsigned char *replacementKey,
         int tolerance,
-        int colorSpace,
         int width,
         int height,
         int iterations,
@@ -223,7 +204,6 @@ extern "C" __global__ void flowKeyKernel(
                     original,
                     replacementKey,
                     tolerance,
-                    colorSpace,
                     width,
                     height
             );

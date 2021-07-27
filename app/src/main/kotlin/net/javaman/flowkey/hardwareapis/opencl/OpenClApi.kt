@@ -14,7 +14,7 @@ class OpenClApi constructor(
     val localWorkSize: Long? = null
 ) : AbstractApi {
     companion object : AbstractApiConsts {
-        override val listName = "OpenCl"
+        override val listName = "OpenCL"
 
         enum class ClMemOperation(val flags: Long) {
             // CL_MEM_USE_HOST_PTR instead of CL_MEM_COPY_HOST_PTR speeds up most operations for realtime video
@@ -104,7 +104,7 @@ class OpenClApi constructor(
             this::class.java.getResource("$it.cl")!!.readText()
         }.toTypedArray()
         program = clCreateProgramWithSource(context, sources.size, sources, null, null)
-        clBuildProgram(program, 0, null, null, null, null)
+        //clBuildProgram(program, 0, null, null, null, null)
     }
 
     override fun getFilters(): Map<String, AbstractFilter> = mapOf(

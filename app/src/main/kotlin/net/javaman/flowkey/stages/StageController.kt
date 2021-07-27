@@ -1,9 +1,8 @@
-// Adapted from https://opencv-java-tutorials.readthedocs.io/en/latest/_images/03-08.png
-
 @file:Suppress("WildcardImport")
 
 package net.javaman.flowkey.stages
 
+import com.github.sarxos.webcam.Webcam
 import javafx.application.Platform
 import javafx.beans.property.ObjectProperty
 import javafx.beans.property.StringProperty
@@ -20,15 +19,15 @@ import javafx.scene.layout.Pane
 import mu.KotlinLogging
 import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
-import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
-import net.javaman.flowkey.hardwareapis.cuda.CudaApi
 import net.javaman.flowkey.hardwareapis.cuda.CudaFlowKeyFilter
+import net.javaman.flowkey.hardwareapis.cuda.CudaGapFillerFilter
 import net.javaman.flowkey.hardwareapis.cuda.CudaNoiseReductionFilter
+import net.javaman.flowkey.hardwareapis.opencl.OpenClApi
 import net.javaman.flowkey.hardwareapis.opencl.OpenClFlowKeyFilter
 import net.javaman.flowkey.hardwareapis.opencl.OpenClNoiseReductionFilter
 import net.javaman.flowkey.hardwareapis.opencl.OpenClSplashFilter
 import net.javaman.flowkey.util.*
-import org.opencv.core.Mat
+import java.awt.image.BufferedImage
 
 val logger = KotlinLogging.logger {}
 
@@ -37,8 +36,6 @@ class StageController {
     companion object {
         const val LATENCY_COUNTER_DELAY_NS = 250_000_000L
     }
-
-    lateinit var rootElement: GridPane
 
     @FXML
     lateinit var originalPane: Pane
@@ -110,12 +107,6 @@ class StageController {
     lateinit var playButtonIcon: ImageView
 
     @FXML
-    lateinit var refreshButton: Button
-
-    @FXML
-    lateinit var refreshButtonIcon: ImageView
-
-    @FXML
     lateinit var filtersListPane: Pane
 
     @FXML
@@ -125,13 +116,25 @@ class StageController {
     lateinit var filterPropertiesTablePane: Pane
 
     @FXML
-    lateinit var filterPropertiesTableView: TableView<Pair<AbstractFilterProperty, Any>>
+    lateinit var filterPropertiesTableView: TableView<Pair<FilterProperty, Any>>
 
     @FXML
-    lateinit var filterPropertiesName: TableColumn<Pair<AbstractFilterProperty, Any>, String>
+    lateinit var filterPropertiesName: TableColumn<Pair<FilterProperty, Any>, String>
 
     @FXML
-    lateinit var filterPropertiesValue: TableColumn<Pair<AbstractFilterProperty, Any>, Number>
+    lateinit var filterPropertiesValue: TableColumn<Pair<FilterProperty, Any>, Any>
+
+    @FXML
+    lateinit var generalSettingsTablePane: Pane
+
+    @FXML
+    lateinit var generalSettingsTableView: TableView<GeneralSettingsProperty>
+
+    @FXML
+    lateinit var generalSettingsName: TableColumn<GeneralSettingsProperty, String>
+
+    @FXML
+    lateinit var generalSettingsValue: TableColumn<GeneralSettingsProperty, Any>
 
     @FXML
     lateinit var bottomBarPane: TitledPane
@@ -148,52 +151,95 @@ class StageController {
     @FXML
     lateinit var fpsCounter: Label
 
-    private var camera: Camera? = null
+    var api: AbstractApi = OpenClApi()
 
-    var api: AbstractApi = CudaApi()
+    var filters: MutableList<AbstractFilter> = mutableListOf()
+
+    var camera: Camera
+
+    var cameraId: String = Webcam.getDefault().name
 
     private var initialBlockAvg: FloatArray? = null
 
-    val filters: MutableList<AbstractFilter> = mutableListOf()
-
     private var lastInstant = System.nanoTime()
+
+    init {
+        camera = Camera(
+            onFrame = ::onFrame,
+            onCameraStart = ::showPauseIcon,
+            onCameraStop = ::showPlayIcon,
+            cameraId = cameraId
+        )
+    }
+
+    fun setUpFiltersMenu() {
+        filterAddMenu.items.setAll(api.getFilters().keys.toList().map { name ->
+            val menuItem = MenuItem(name)
+            menuItem.setOnAction { onFilterAddItem(name) }
+            menuItem
+        })
+        filters = mutableListOf()
+        filtersListView.items.setAll(emptyList())
+    }
 
     @FXML
     fun startCamera(
         @Suppress("UNUSED_PARAMETER") actionEvent: ActionEvent
     ) {
-        camera ?: run {
-            camera = Camera(
-                onFrame = ::onFrame,
-                onCameraStart = { playButtonIcon.image = getImage("pause") },
-                onCameraStop = { playButtonIcon.image = getImage("play") },
-                cameraId = 1
-            )
+        if (camera.isActive) {
+            camera.stop()
+        } else {
+            camera.start()
         }
-        camera!!.toggle()
     }
 
-    private fun onFrame(frame: Mat) {
-        val originalFrameData = frame.toByteArray()
+    fun refreshCamera() {
+        camera.stop()
+        camera = Camera(
+            onFrame = ::onFrame,
+            onCameraStart = ::showPauseIcon,
+            onCameraStop = ::showPlayIcon,
+            cameraId = cameraId
+        )
+    }
+
+    private fun showPauseIcon() {
+        playButtonIcon.image = getImage("pause")
+    }
+
+    private fun showPlayIcon() {
+        playButtonIcon.image = getImage("play")
+    }
+
+    private fun onFrame(originalImage: BufferedImage, frameWidth: Int, frameHeight: Int) {
+        val originalFrame = originalImage.toByteArray()
         val tStart = System.nanoTime()
-        var workingFrame = originalFrameData.clone()
+        var workingFrame = originalFrame.clone()
         try {
             filters.forEach { filter ->
                 when (filter) {
                     is OpenClNoiseReductionFilter -> filter.apply {
-                        templateBuffer = originalFrameData
+                        templateBuffer = originalFrame
                     }
                     is OpenClFlowKeyFilter -> filter.apply {
-                        templateBuffer = originalFrameData
+                        templateBuffer = originalFrame
                     }
                     is OpenClSplashFilter -> filter.apply {
                         inputBlockAverageBuffer = initialBlockAvg!!
                     }
                     is CudaNoiseReductionFilter -> filter.apply {
-                        templateBuffer = originalFrameData
+                        templateBuffer = originalFrame
+                        width = frameWidth
+                        height = frameHeight
                     }
                     is CudaFlowKeyFilter -> filter.apply {
-                        templateBuffer = originalFrameData
+                        templateBuffer = originalFrame
+                        width = frameWidth
+                        height = frameHeight
+                    }
+                    is CudaGapFillerFilter -> filter.apply {
+                        width = frameWidth
+                        height = frameHeight
                     }
                 }
                 workingFrame = filter.apply(workingFrame)
@@ -213,10 +259,9 @@ class StageController {
             lastInstant = tEnd
         }
         Thread {
-            val modifiedImage = workingFrame.toBufferedImage(camera!!.maxWidth, camera!!.maxHeight)
+            val modifiedImage = workingFrame.toBufferedImage(frameWidth, frameHeight)
+            onFXThreadImage(this.originalFrame.imageProperty(), SwingFXUtils.toFXImage(originalImage, null))
             onFXThreadImage(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
-            val initialImage = originalFrameData.toBufferedImage(camera!!.maxWidth, camera!!.maxHeight)
-            onFXThreadImage(originalFrame.imageProperty(), SwingFXUtils.toFXImage(initialImage, null))
         }.start()
     }
 
@@ -227,21 +272,11 @@ class StageController {
     private fun getImage(name: String) = Image(this::class.java.getResourceAsStream("../icons/$name.png"))
 
     @FXML
-    fun onRefreshAction(
-        actionEvent: ActionEvent
-    ) {
-        if (camera?.cameraActive == true) {
-            repeat(2) { startCamera(actionEvent) }
-        }
-        api = CudaApi()
-    }
-
-    @FXML
     fun onFilterAddAction(
         @Suppress("UNUSED_PARAMETER") actionEvent: ActionEvent
     ) = filterAddMenu.show(filterAdd, Side.BOTTOM, 0.0, 0.0)
 
-    fun onFilterAddItem(name: String) {
+    private fun onFilterAddItem(name: String) {
         api.getFilters()[name]?.let { filters.add(it) }
         val listCell = ListCell<String>()
         listCell.text = name
@@ -328,7 +363,7 @@ class StageController {
     }
 
     fun setClosed() {
-        camera?.close()
+        camera.stop()
         api.close()
     }
 }

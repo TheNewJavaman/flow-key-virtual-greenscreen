@@ -7,7 +7,7 @@ import jcuda.Sizeof
 import jcuda.driver.JCudaDriver.*
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterConsts
-import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
+import net.javaman.flowkey.stages.FilterProperty
 import net.javaman.flowkey.util.DEFAULT_COLOR
 import net.javaman.flowkey.util.DEFAULT_HEIGHT_PIXELS
 import net.javaman.flowkey.util.DEFAULT_ITERATIONS
@@ -25,18 +25,18 @@ class CudaGapFillerFilter constructor(
 
     private var iterations = DEFAULT_ITERATIONS
 
-    private var width = DEFAULT_WIDTH_PIXELS
+    var width = DEFAULT_WIDTH_PIXELS
 
-    private var height = DEFAULT_HEIGHT_PIXELS
+    var height = DEFAULT_HEIGHT_PIXELS
 
-    override fun getProperties(): Map<AbstractFilterProperty, Any> = mapOf(
-        AbstractFilterProperty.ITERATIONS to iterations,
-        AbstractFilterProperty.REPLACEMENT_KEY to replacementKey
+    override fun getProperties(): Map<FilterProperty, Any> = mapOf(
+        FilterProperty.ITERATIONS to iterations,
+        FilterProperty.REPLACEMENT_KEY to replacementKey
     )
 
     override fun setProperty(listName: String, newValue: Any) = when (listName) {
-        AbstractFilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
-        AbstractFilterProperty.ITERATIONS.listName -> iterations = newValue as Int
+        FilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
+        FilterProperty.ITERATIONS.listName -> iterations = newValue as Int
         else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
     }
 

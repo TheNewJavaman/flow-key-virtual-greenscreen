@@ -7,8 +7,7 @@ import jcuda.Sizeof
 import jcuda.driver.JCudaDriver.*
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterConsts
-import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
-import net.javaman.flowkey.hardwareapis.common.ColorSpace
+import net.javaman.flowkey.stages.FilterProperty
 import net.javaman.flowkey.util.DEFAULT_COLOR
 import net.javaman.flowkey.util.DEFAULT_TOLERANCE
 import net.javaman.flowkey.util.PIXEL_MULTIPLIER
@@ -27,20 +26,16 @@ class CudaInitialComparisonFilter constructor(
 
     private var percentTolerance = DEFAULT_TOLERANCE
 
-    private var colorSpace = ColorSpace.ALL
-
-    override fun getProperties(): Map<AbstractFilterProperty, Any> = mapOf(
-        AbstractFilterProperty.TOLERANCE to percentTolerance,
-        AbstractFilterProperty.COLOR_KEY to colorKey,
-        AbstractFilterProperty.REPLACEMENT_KEY to replacementKey,
-        AbstractFilterProperty.COLOR_SPACE to colorSpace
+    override fun getProperties(): Map<FilterProperty, Any> = mapOf(
+        FilterProperty.TOLERANCE to percentTolerance,
+        FilterProperty.COLOR_KEY to colorKey,
+        FilterProperty.REPLACEMENT_KEY to replacementKey
     )
 
     override fun setProperty(listName: String, newValue: Any)= when (listName) {
-        AbstractFilterProperty.TOLERANCE.listName -> percentTolerance = newValue as Float
-        AbstractFilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
-        AbstractFilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
-        AbstractFilterProperty.COLOR_SPACE.listName -> colorSpace = newValue as ColorSpace
+        FilterProperty.TOLERANCE.listName -> percentTolerance = newValue as Float
+        FilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
+        FilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
         else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
     }
 
@@ -58,8 +53,7 @@ class CudaInitialComparisonFilter constructor(
             Pointer.to(outputPtr),
             Pointer.to(colorKeyPtr),
             Pointer.to(replacementKeyPtr),
-            Pointer.to(intArrayOf((percentTolerance * PIXEL_MULTIPLIER).toInt())),
-            Pointer.to(intArrayOf(colorSpace.i))
+            Pointer.to(intArrayOf((percentTolerance * PIXEL_MULTIPLIER).toInt()))
         )
 
         val gridSize = ceil(inputBuffer.size / CudaApi.BLOCK_SIZE.toDouble()).toInt()

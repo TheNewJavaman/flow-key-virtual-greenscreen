@@ -4,8 +4,7 @@ package net.javaman.flowkey.hardwareapis.opencl
 
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterConsts
-import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
-import net.javaman.flowkey.hardwareapis.common.ColorSpace
+import net.javaman.flowkey.stages.FilterProperty
 import net.javaman.flowkey.hardwareapis.opencl.OpenClApi.Companion.ClMemOperation
 import net.javaman.flowkey.util.*
 import org.jocl.CL.*
@@ -18,7 +17,6 @@ class OpenClFlowKeyFilter @Suppress("LongParameterList") constructor(
     var iterations: Int = 3,
     var colorKey: ByteArray = DEFAULT_COLOR,
     var gradientTolerance: Float = DEFAULT_TOLERANCE,
-    var colorSpace: ColorSpace = ColorSpace.ALL,
     var width: Int = DEFAULT_WIDTH_PIXELS,
     var height: Int = DEFAULT_HEIGHT_PIXELS,
     var templateBuffer: ByteArray = ByteArray(size = width * height * COLOR_DEPTH)
@@ -29,18 +27,16 @@ class OpenClFlowKeyFilter @Suppress("LongParameterList") constructor(
         private const val KERNEL_NAME = "flowKeyKernel"
     }
 
-    override fun getProperties(): Map<AbstractFilterProperty, Any> = mapOf(
-        AbstractFilterProperty.TOLERANCE to gradientTolerance,
-        AbstractFilterProperty.ITERATIONS to iterations,
-        AbstractFilterProperty.REPLACEMENT_KEY to colorKey,
-        AbstractFilterProperty.COLOR_SPACE to colorSpace
+    override fun getProperties(): Map<FilterProperty, Any> = mapOf(
+        FilterProperty.TOLERANCE to gradientTolerance,
+        FilterProperty.ITERATIONS to iterations,
+        FilterProperty.REPLACEMENT_KEY to colorKey,
     )
 
     override fun setProperty(listName: String, newValue: Any) = when (listName) {
-        AbstractFilterProperty.TOLERANCE.listName -> gradientTolerance = newValue as Float
-        AbstractFilterProperty.ITERATIONS.listName -> iterations = newValue as Int
-        AbstractFilterProperty.REPLACEMENT_KEY.listName -> colorKey = newValue as ByteArray
-        AbstractFilterProperty.COLOR_SPACE.listName -> colorSpace = newValue as ColorSpace
+        FilterProperty.TOLERANCE.listName -> gradientTolerance = newValue as Float
+        FilterProperty.ITERATIONS.listName -> iterations = newValue as Int
+        FilterProperty.REPLACEMENT_KEY.listName -> colorKey = newValue as ByteArray
         else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
     }
 
@@ -51,7 +47,7 @@ class OpenClFlowKeyFilter @Suppress("LongParameterList") constructor(
         for (i in 0 until iterations) {
             val outputBuffer = ByteArray(size = mutableInputBuffer.size)
             val floatOptionsBuffer = floatArrayOf(0.0f, gradientTolerance)
-            val intOptionsBuffer = intArrayOf(colorSpace.i, width, height)
+            val intOptionsBuffer = intArrayOf(width, height)
 
             val inputPtr = Pointer.to(mutableInputBuffer)
             val outputPtr = Pointer.to(outputBuffer)

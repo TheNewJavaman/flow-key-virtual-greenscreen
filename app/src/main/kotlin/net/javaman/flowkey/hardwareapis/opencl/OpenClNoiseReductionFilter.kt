@@ -4,7 +4,7 @@ package net.javaman.flowkey.hardwareapis.opencl
 
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterConsts
-import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
+import net.javaman.flowkey.stages.FilterProperty
 import net.javaman.flowkey.hardwareapis.opencl.OpenClApi.Companion.ClMemOperation
 import net.javaman.flowkey.util.COLOR_DEPTH
 import net.javaman.flowkey.util.DEFAULT_COLOR
@@ -29,14 +29,14 @@ class OpenClNoiseReductionFilter @Suppress("LongParameterList") constructor(
         private const val KERNEL_NAME = "noiseReductionKernel"
     }
 
-    override fun getProperties(): Map<AbstractFilterProperty, Any> = mapOf(
-        AbstractFilterProperty.ITERATIONS to iterations,
-        AbstractFilterProperty.COLOR_KEY to colorKey,
+    override fun getProperties(): Map<FilterProperty, Any> = mapOf(
+        FilterProperty.ITERATIONS to iterations,
+        FilterProperty.COLOR_KEY to colorKey,
     )
 
     override fun setProperty(listName: String, newValue: Any) = when (listName) {
-        AbstractFilterProperty.ITERATIONS.listName -> iterations = newValue as Int
-        AbstractFilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
+        FilterProperty.ITERATIONS.listName -> iterations = newValue as Int
+        FilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
         else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
     }
 

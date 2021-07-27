@@ -13,20 +13,19 @@ Intelligent greenscreen software that adapts to uneven lighting
 
 ## Next Up
 
+- Implement virtual camera
+    - Output modified frames to a virtual camera device so that other applications can use the video feed
+- Do not build Cuda program at runtime
+    - Generate fatbins (binaries built for multiple GPU architectures) instead of runtime ptx/cubin compilations
+    - This will decrease startup time
+    - Users won't need developer tools to be installed for the program to run
 - Rewrite Cuda pipeline to use a pixel map instead of always operating on the entire image
     - Use boolean logic on a pixel map; instead of comparing an entire color to compare whether a pixel is greenscreen,
       use a binary color map so that there's only one read and one write operation per pixel instead of three each, one
       per color
     - Profiling is easier in Cuda than OpenCL, so it makes sense to first optimize the kernels on Cuda
 - Rewrite entire OpenCL pipeline to match Cuda
-- Do not build Cuda program at runtime
-    - Generate fatbins (binaries built for multiple GPU architectures) instead of runtime ptx/cubin compilations
-    - This will decrease startup time
-    - Users won't need developer tools to be installed for the program to run
-- Finish general settings
-    - Allow users to change camera and hardware API settings on the fly using the GUI
-- Implement virtual camera
-    - Output modified frames to a virtual camera device so that other applications can use the video feed
+- Save settings as a JSON file
 - Add support for other hardware APIs
     - I've heard that Vulkan has a compute API. Maybe that would be better for AMD devices?
 

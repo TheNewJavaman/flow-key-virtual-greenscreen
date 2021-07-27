@@ -8,8 +8,7 @@ import jcuda.driver.JCudaDriver
 import jcuda.driver.JCudaDriver.cuCtxSetCurrent
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterConsts
-import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
-import net.javaman.flowkey.hardwareapis.common.ColorSpace
+import net.javaman.flowkey.stages.FilterProperty
 import net.javaman.flowkey.util.*
 import kotlin.math.ceil
 
@@ -28,24 +27,20 @@ class CudaFlowKeyFilter constructor(
 
     private var tolerance = DEFAULT_TOLERANCE
 
-    private var colorSpace = ColorSpace.ALL
+    var width = DEFAULT_WIDTH_PIXELS
 
-    private var width = DEFAULT_WIDTH_PIXELS
+    var height = DEFAULT_HEIGHT_PIXELS
 
-    private var height = DEFAULT_HEIGHT_PIXELS
-
-    override fun getProperties(): Map<AbstractFilterProperty, Any> = mapOf(
-        AbstractFilterProperty.TOLERANCE to tolerance,
-        AbstractFilterProperty.ITERATIONS to iterations,
-        AbstractFilterProperty.REPLACEMENT_KEY to replacementKey,
-        AbstractFilterProperty.COLOR_SPACE to colorSpace
+    override fun getProperties(): Map<FilterProperty, Any> = mapOf(
+        FilterProperty.TOLERANCE to tolerance,
+        FilterProperty.ITERATIONS to iterations,
+        FilterProperty.REPLACEMENT_KEY to replacementKey
     )
 
     override fun setProperty(listName: String, newValue: Any) = when (listName) {
-        AbstractFilterProperty.ITERATIONS.listName -> iterations = newValue as Int
-        AbstractFilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
-        AbstractFilterProperty.TOLERANCE.listName -> tolerance = newValue as Float
-        AbstractFilterProperty.COLOR_SPACE.listName -> colorSpace = newValue as ColorSpace
+        FilterProperty.ITERATIONS.listName -> iterations = newValue as Int
+        FilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
+        FilterProperty.TOLERANCE.listName -> tolerance = newValue as Float
         else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
     }
 
@@ -69,7 +64,6 @@ class CudaFlowKeyFilter constructor(
             Pointer.to(templatePtr),
             Pointer.to(replacementKeyPtr),
             Pointer.to(intArrayOf((tolerance * PIXEL_MULTIPLIER).toInt())),
-            Pointer.to(intArrayOf(colorSpace.i)),
             Pointer.to(intArrayOf(width)),
             Pointer.to(intArrayOf(height)),
             Pointer.to(intArrayOf(iterations)),

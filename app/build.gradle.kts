@@ -56,8 +56,12 @@ dependencies {
     implementation("org.openjfx:javafx-swing:16")
     implementation("org.slf4j:slf4j-simple:1.7.29")
     implementation("io.github.microutils:kotlin-logging-jvm:2.0.10")
-    // Download OpenCV jar from the official site; not available on Maven
-    implementation(files("libs/opencv-452.jar"))
+    implementation("com.github.sarxos:webcam-capture:0.3.12")
+    implementation("org.reflections:reflections:0.9.12")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.21")
+    // Download jar from
+    // https://github.com/frankpapenmeier/webcam-capture-driver-native/tree/master/bin
+    implementation(files("libs/webcam-capture-driver-native.jar"))
 }
 
 javafx {
@@ -66,7 +70,8 @@ javafx {
 
 application {
     mainClass.set("net.javaman.flowkey.FlowKeyApplication")
-    // Download OpenCV dll from the official site; platform-specific
+    // Download native webcam drivers from
+    // https://github.com/frankpapenmeier/webcam-capture-driver-native/tree/master/bin
     applicationDefaultJvmArgs = listOf("-Djava.library.path=libs")
 }
 

@@ -4,8 +4,7 @@ package net.javaman.flowkey.hardwareapis.opencl
 
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterConsts
-import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
-import net.javaman.flowkey.hardwareapis.common.ColorSpace
+import net.javaman.flowkey.stages.FilterProperty
 import net.javaman.flowkey.hardwareapis.opencl.OpenClApi.Companion.ClMemOperation
 import net.javaman.flowkey.util.DEFAULT_COLOR
 import net.javaman.flowkey.util.DEFAULT_HEIGHT_PIXELS
@@ -19,7 +18,6 @@ class OpenClSplashFilter @Suppress("LongParameterList") constructor(
     private val api: OpenClApi,
     var colorKey: ByteArray = DEFAULT_COLOR,
     var percentTolerance: Float = 0.12f,
-    var colorSpace: ColorSpace = ColorSpace.ALL,
     var width: Int = DEFAULT_WIDTH_PIXELS,
     var height: Int = DEFAULT_HEIGHT_PIXELS,
     var blockSize: Int = 5,
@@ -35,18 +33,16 @@ class OpenClSplashFilter @Suppress("LongParameterList") constructor(
         private const val KERNEL_NAME = "splashKernel"
     }
 
-    override fun getProperties(): Map<AbstractFilterProperty, Any> = mapOf(
-        AbstractFilterProperty.TOLERANCE to percentTolerance,
-        AbstractFilterProperty.REPLACEMENT_KEY to colorKey,
-        AbstractFilterProperty.COLOR_SPACE to colorSpace,
-        AbstractFilterProperty.BLOCK_SIZE to blockSize
+    override fun getProperties(): Map<FilterProperty, Any> = mapOf(
+        FilterProperty.TOLERANCE to percentTolerance,
+        FilterProperty.REPLACEMENT_KEY to colorKey,
+        FilterProperty.BLOCK_SIZE to blockSize
     )
 
     override fun setProperty(listName: String, newValue: Any) = when (listName) {
-        AbstractFilterProperty.TOLERANCE.listName -> percentTolerance = newValue as Float
-        AbstractFilterProperty.REPLACEMENT_KEY.listName -> colorKey = newValue as ByteArray
-        AbstractFilterProperty.COLOR_SPACE.listName -> colorSpace = newValue as ColorSpace
-        AbstractFilterProperty.BLOCK_SIZE.listName -> blockSize = newValue as Int
+        FilterProperty.TOLERANCE.listName -> percentTolerance = newValue as Float
+        FilterProperty.REPLACEMENT_KEY.listName -> colorKey = newValue as ByteArray
+        FilterProperty.BLOCK_SIZE.listName -> blockSize = newValue as Int
         else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
     }
 
@@ -54,7 +50,7 @@ class OpenClSplashFilter @Suppress("LongParameterList") constructor(
     override fun apply(inputBuffer: ByteArray): ByteArray {
         val outputBuffer = ByteArray(size = inputBuffer.size)
         val floatOptionsBuffer = floatArrayOf(percentTolerance)
-        val intOptionsBuffer = intArrayOf(colorSpace.i, width, height, blockSize)
+        val intOptionsBuffer = intArrayOf(width, height, blockSize)
 
         val inputPtr = Pointer.to(inputBuffer)
         val outputPtr = Pointer.to(outputBuffer)

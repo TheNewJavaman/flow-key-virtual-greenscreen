@@ -4,21 +4,16 @@ package net.javaman.flowkey.stages
 
 import javafx.geometry.Pos
 import javafx.scene.control.ColorPicker
-import javafx.scene.control.ComboBox
 import javafx.scene.control.Spinner
 import javafx.scene.control.TableCell
 import javafx.scene.paint.Color
 import javafx.util.StringConverter
 import net.javaman.flowkey.FlowKeyApplication
-import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
-import net.javaman.flowkey.hardwareapis.common.AbstractFilterPropertyType
-import net.javaman.flowkey.hardwareapis.common.ColorSpace
 import net.javaman.flowkey.util.PIXEL_MULTIPLIER
 import java.text.DecimalFormat
-import java.util.*
 
 
-class FilterPropertyValueTableCell<T> : TableCell<Pair<AbstractFilterProperty, Any>, T>() {
+class FilterPropertyValueTableCell<T> : TableCell<Pair<FilterProperty, Any>, T>() {
     companion object {
         const val INT_STEP = 1
 
@@ -50,17 +45,16 @@ class FilterPropertyValueTableCell<T> : TableCell<Pair<AbstractFilterProperty, A
         if (empty) {
             graphic = null
         } else {
-            val data = (tableView.items[tableRow.index] as Pair<AbstractFilterProperty, Any>)
+            val data = tableView.items[tableRow.index] as Pair<FilterProperty, Any>
             when (data.first.dataType) {
-                AbstractFilterPropertyType.INT -> setIntProperty(data)
-                AbstractFilterPropertyType.FLOAT -> setFloatProperty(data)
-                AbstractFilterPropertyType.COLOR_SPACE -> setColorSpaceProperty(data)
-                AbstractFilterPropertyType.COLOR -> setColorProperty(data)
+                FilterPropertyType.INT -> setIntProperty(data)
+                FilterPropertyType.FLOAT -> setFloatProperty(data)
+                FilterPropertyType.COLOR -> setColorProperty(data)
             }
         }
     }
 
-    private fun setIntProperty(data: Pair<AbstractFilterProperty, Any>) {
+    private fun setIntProperty(data: Pair<FilterProperty, Any>) {
         val intSpinner = Spinner<Int>(0, Int.MAX_VALUE, INT_STEP, INT_STEP)
         val controller = FlowKeyApplication.controller
         val selectedId = controller.filtersListView.selectionModel.selectedItem.id.toInt()
@@ -76,7 +70,7 @@ class FilterPropertyValueTableCell<T> : TableCell<Pair<AbstractFilterProperty, A
         graphic = intSpinner
     }
 
-    private fun setFloatProperty(data: Pair<AbstractFilterProperty, Any>) {
+    private fun setFloatProperty(data: Pair<FilterProperty, Any>) {
         val doubleSpinner = Spinner<Double>(0.0, 1.0, FLOAT_STEP, FLOAT_STEP)
         doubleSpinner.valueFactory.converter = DoubleConverter()
         val controller = FlowKeyApplication.controller
@@ -99,37 +93,21 @@ class FilterPropertyValueTableCell<T> : TableCell<Pair<AbstractFilterProperty, A
         graphic = doubleSpinner
     }
 
-    private fun setColorProperty(data: Pair<AbstractFilterProperty, Any>) {
+    private fun setColorProperty(data: Pair<FilterProperty, Any>) {
         val originalColor = (data.second as ByteArray).map { it.toUByte().toInt() / PIXEL_MULTIPLIER.toDouble() }
-        val colorPicker = ColorPicker(Color.color(originalColor[2], originalColor[1], originalColor[0]))
+        val colorPicker = ColorPicker(Color.color(originalColor[0], originalColor[1], originalColor[2]))
         val controller = FlowKeyApplication.controller
         val selectedId = controller.filtersListView.selectionModel.selectedItem.id.toInt()
         colorPicker.setOnAction { _ ->
             val newColor = colorPicker.value
             controller.filters[selectedId].setProperty(
                 data.first.listName,
-                listOf(newColor.blue, newColor.green, newColor.red).map {
+                listOf(newColor.red, newColor.green, newColor.blue).map {
                     (it * PIXEL_MULTIPLIER.toDouble()).toInt().toByte()
                 }.toByteArray()
             )
         }
         colorPicker.prefWidth = WIDTH_PIXELS
         graphic = colorPicker
-    }
-
-    private fun setColorSpaceProperty(data: Pair<AbstractFilterProperty, Any>) {
-        val colorOption = ComboBox<String>()
-        colorOption.items.setAll(ColorSpace.values().toList().map { it.listName }.reversed())
-        val controller = FlowKeyApplication.controller
-        val selectedId = controller.filtersListView.selectionModel.selectedItem.id.toInt()
-        colorOption.selectionModel.select((data.second as ColorSpace).listName)
-        colorOption.setOnAction {
-            controller.filters[selectedId].setProperty(
-                data.first.listName,
-                ColorSpace.valueOf(colorOption.selectionModel.selectedItem.uppercase(Locale.getDefault()))
-            )
-        }
-        graphic = colorOption
-        colorOption.prefWidth = WIDTH_PIXELS
     }
 }

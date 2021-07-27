@@ -4,9 +4,8 @@ package net.javaman.flowkey.hardwareapis.opencl
 
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterConsts
-import net.javaman.flowkey.hardwareapis.common.AbstractFilterProperty
-import net.javaman.flowkey.hardwareapis.common.ColorSpace
 import net.javaman.flowkey.hardwareapis.opencl.OpenClApi.Companion.ClMemOperation
+import net.javaman.flowkey.stages.FilterProperty
 import net.javaman.flowkey.util.DEFAULT_COLOR
 import net.javaman.flowkey.util.DEFAULT_HEIGHT_PIXELS
 import net.javaman.flowkey.util.DEFAULT_TOLERANCE
@@ -21,7 +20,6 @@ class OpenClInitialComparisonFilter @Suppress("LongParameterList") constructor(
     var colorKey: ByteArray = DEFAULT_COLOR,
     var replacementKey: ByteArray = DEFAULT_COLOR,
     var percentTolerance: Float = DEFAULT_TOLERANCE,
-    var colorSpace: ColorSpace = ColorSpace.ALL,
     var width: Int = DEFAULT_WIDTH_PIXELS,
     var height: Int = DEFAULT_HEIGHT_PIXELS
 ) : AbstractFilter{
@@ -31,18 +29,16 @@ class OpenClInitialComparisonFilter @Suppress("LongParameterList") constructor(
         private const val KERNEL_NAME = "initialComparisonKernel"
     }
 
-    override fun getProperties(): Map<AbstractFilterProperty, Any> = mapOf(
-        AbstractFilterProperty.TOLERANCE to percentTolerance,
-        AbstractFilterProperty.COLOR_KEY to colorKey,
-        AbstractFilterProperty.REPLACEMENT_KEY to replacementKey,
-        AbstractFilterProperty.COLOR_SPACE to colorSpace
+    override fun getProperties(): Map<FilterProperty, Any> = mapOf(
+        FilterProperty.TOLERANCE to percentTolerance,
+        FilterProperty.COLOR_KEY to colorKey,
+        FilterProperty.REPLACEMENT_KEY to replacementKey,
     )
 
     override fun setProperty(listName: String, newValue: Any) = when (listName) {
-        AbstractFilterProperty.TOLERANCE.listName -> percentTolerance = newValue as Float
-        AbstractFilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
-        AbstractFilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
-        AbstractFilterProperty.COLOR_SPACE.listName -> colorSpace = newValue as ColorSpace
+        FilterProperty.TOLERANCE.listName -> percentTolerance = newValue as Float
+        FilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
+        FilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
         else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
     }
 
@@ -50,7 +46,7 @@ class OpenClInitialComparisonFilter @Suppress("LongParameterList") constructor(
     override fun apply(inputBuffer: ByteArray): ByteArray {
         val outputBuffer = ByteArray(size = inputBuffer.size)
         val floatOptionsBuffer = floatArrayOf(percentTolerance)
-        val intOptionsBuffer = intArrayOf(colorSpace.i, width, height)
+        val intOptionsBuffer = intArrayOf(width, height)
 
         val inputPtr = Pointer.to(inputBuffer)
         val outputPtr = Pointer.to(outputBuffer)

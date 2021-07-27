@@ -1,64 +1,55 @@
 package net.javaman.flowkey.util
 
-import org.opencv.core.Mat
-import org.opencv.videoio.VideoCapture
-import org.opencv.videoio.Videoio
+import com.github.sarxos.webcam.Webcam
+import java.awt.Dimension
+import java.awt.image.BufferedImage
 import java.util.*
 import kotlin.concurrent.scheduleAtFixedRate
 
-@Suppress("LongParameterList")
 class Camera constructor(
-    private val onFrame: (Mat) -> Unit,
+    private val onFrame: (BufferedImage, Int, Int) -> Unit,
     private val onCameraStart: () -> Unit,
     private val onCameraStop: () -> Unit,
-    framesPerSecond: Long = 30L,
-    private val cameraId: Int = 0,
-    val maxWidth: Int = DEFAULT_WIDTH_PIXELS,
-    val maxHeight: Int = DEFAULT_HEIGHT_PIXELS
+    cameraId: String,
+    framesPerSecond: Long = 30L
 ) {
+    private val frameLatencyMs = ONE_SECOND_MS / framesPerSecond
+
     private var timer: Timer? = null
 
-    private val capture = VideoCapture()
+    private val camera: Webcam = Webcam.getWebcamByName(cameraId)
 
-    var cameraActive = false
+    var isActive: Boolean = false
 
-    private var frameLatencyMs = ONE_SECOND_MS / framesPerSecond
-
-    fun toggle() {
-        if (!cameraActive) {
-            capture.open(cameraId)
-            if (capture.isOpened) {
-                cameraActive = true
-                capture.set(Videoio.CAP_PROP_FRAME_WIDTH, maxWidth.toDouble())
-                capture.set(Videoio.CAP_PROP_FRAME_HEIGHT, maxHeight.toDouble())
-                timer = Timer()
-                timer!!.scheduleAtFixedRate(0L, frameLatencyMs) { onFrame(grabFrame()) }
-                onCameraStart()
+    fun start() {
+        camera.open()
+        timer = Timer()
+        timer!!.scheduleAtFixedRate(0L, frameLatencyMs) {
+            with (camera.viewSize) {
+                camera.image?.let {
+                    onFrame(it, this.width, this.height)
+                }
             }
-        } else {
-            cameraActive = false
-            onCameraStop()
-            stopAcquisition()
         }
+        isActive = true
+        onCameraStart()
     }
 
-    private fun grabFrame(): Mat {
-        val frame = Mat()
-        if (capture.isOpened) {
-            capture.read(frame)
-        }
-        return frame
+    fun stop() {
+        isActive = false
+        timer?.cancel()
+        timer?.purge()
+        camera.close()
+        onCameraStop()
     }
 
-    fun close() = stopAcquisition()
+    fun getResolutions(): Array<Dimension> = camera.viewSizes
 
-    private fun stopAcquisition() {
-        if (timer != null) {
-            timer!!.cancel()
-            timer!!.purge()
-        }
-        if (capture.isOpened) {
-            capture.release()
-        }
+    fun getResolution(): Dimension = camera.viewSize ?: camera.viewSizes.first()
+
+    fun setResolution(resolution: Dimension) {
+        stop()
+        camera.viewSize = resolution
+        start()
     }
 }

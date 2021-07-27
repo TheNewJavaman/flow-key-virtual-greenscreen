@@ -1,19 +1,17 @@
 package net.javaman.flowkey
 
+import com.github.sarxos.webcam.Webcam
+import com.github.sarxos.webcam.ds.nativeapi.NativeWebcamDriver
 import javafx.application.Application
 import javafx.event.EventHandler
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
 import javafx.scene.control.Label
-import javafx.scene.control.MenuItem
 import javafx.scene.layout.GridPane
 import javafx.scene.text.TextAlignment
 import javafx.stage.Stage
 import mu.KotlinLogging
-import net.javaman.flowkey.stages.FilterPropertyNameTableCell
-import net.javaman.flowkey.stages.FilterPropertyValueTableCell
-import net.javaman.flowkey.stages.StageController
-import org.opencv.core.Core
+import net.javaman.flowkey.stages.*
 import java.util.*
 import kotlin.system.exitProcess
 
@@ -25,6 +23,8 @@ class FlowKeyApplication : Application() {
 
         const val DEFAULT_HEIGHT = 800.0
 
+        const val MAIN_PACKAGE = "net.javaman.flowkey"
+
         lateinit var rootElement: GridPane
 
         lateinit var version: String
@@ -34,10 +34,10 @@ class FlowKeyApplication : Application() {
         @JvmStatic
         fun main(args: Array<String>) {
             logger.info { "Starting Flow Key application..." }
-            System.loadLibrary(Core.NATIVE_LIBRARY_NAME)
             val properties = Properties()
             properties.load(this::class.java.getResourceAsStream("application.properties"))
             version = properties.getProperty("version")
+            Webcam.setDriver(NativeWebcamDriver())
             launch(FlowKeyApplication::class.java)
         }
     }
@@ -51,6 +51,18 @@ class FlowKeyApplication : Application() {
         primaryStage.scene = scene
         primaryStage.show()
         controller = loader.getController()
+        setUpVideoFeeds()
+        setUpFiltersList()
+        setUpFilterPropertiesList()
+        setUpGeneralSettingsList()
+        setUpBottomBar()
+        primaryStage.onCloseRequest = EventHandler {
+            controller.setClosed()
+            exitProcess(0)
+        }
+    }
+    
+    private fun setUpVideoFeeds() {
         controller.originalHBox.minWidthProperty().bind(controller.originalPane.widthProperty())
         controller.originalHBox.minHeightProperty().bind(controller.originalPane.heightProperty())
         controller.originalFrame.fitWidthProperty().bind(controller.originalHBox.widthProperty())
@@ -59,6 +71,9 @@ class FlowKeyApplication : Application() {
         controller.modifiedHBox.minHeightProperty().bind(controller.originalPane.heightProperty())
         controller.modifiedFrame.fitWidthProperty().bind(controller.modifiedHBox.widthProperty())
         controller.modifiedFrame.fitHeightProperty().bind(controller.modifiedHBox.heightProperty())
+    }
+    
+    private fun setUpFiltersList() {
         controller.filtersHeader.minWidthProperty().bind(controller.filtersPane.widthProperty())
         controller.filterPropertiesHeader.minWidthProperty().bind(controller.filterPropertiesPane.widthProperty())
         controller.generalSettingsHeader.minWidthProperty().bind(controller.generalSettingsPane.widthProperty())
@@ -70,11 +85,10 @@ class FlowKeyApplication : Application() {
         val filtersListViewPlaceholder = Label("Nothing here yet.\nAdd a filter above!")
         filtersListViewPlaceholder.textAlignment = TextAlignment.CENTER
         controller.filtersListView.placeholder = filtersListViewPlaceholder
-        controller.filterAddMenu.items.setAll(controller.api.getFilters().keys.toList().map { name ->
-            val menuItem = MenuItem(name)
-            menuItem.setOnAction { controller.onFilterAddItem(name) }
-            menuItem
-        })
+        controller.setUpFiltersMenu()
+    }
+
+    private fun setUpFilterPropertiesList() {
         controller.filterPropertiesTableView.minWidthProperty()
             .bind(controller.filterPropertiesTablePane.widthProperty())
         controller.filterPropertiesTableView.minHeightProperty()
@@ -82,11 +96,21 @@ class FlowKeyApplication : Application() {
         controller.filterPropertiesTableView.styleClass.add("noheader")
         controller.filterPropertiesName.setCellFactory { FilterPropertyNameTableCell() }
         controller.filterPropertiesValue.setCellFactory { FilterPropertyValueTableCell() }
+    }
+
+    private fun setUpGeneralSettingsList() {
+        controller.generalSettingsTableView.minWidthProperty()
+            .bind(controller.generalSettingsTablePane.widthProperty())
+        controller.generalSettingsTableView.minHeightProperty()
+            .bind(controller.generalSettingsTablePane.heightProperty())
+        controller.generalSettingsTableView.styleClass.add("noheader")
+        controller.generalSettingsName.setCellFactory { GeneralSettingsNameTableCell() }
+        controller.generalSettingsValue.setCellFactory { GeneralSettingsValueTableCell() }
+        controller.generalSettingsTableView.items.setAll(GeneralSettingsProperty.values().toList())
+    }
+
+    private fun setUpBottomBar() {
         controller.bottomBarGrid.minWidthProperty().bind(controller.bottomBarPane.widthProperty())
         controller.versionLabel.text = "Version $version"
-        primaryStage.onCloseRequest = EventHandler {
-            controller.setClosed()
-            exitProcess(0)
-        }
     }
 }

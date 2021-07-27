@@ -4,5 +4,6 @@
 build
 cmake-build-debug
 app/libs
-*.log
+*.hprof
 *.jfr
+*.log
