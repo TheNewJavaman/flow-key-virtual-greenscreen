@@ -4,9 +4,38 @@ package net.javaman.flowkey.hardwareapis.opencl
 
 import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractApiConsts
+import net.javaman.flowkey.hardwareapis.common.AbstractApplyBitmap
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
-import org.jocl.*
-import org.jocl.CL.*
+import net.javaman.flowkey.hardwareapis.cuda.CudaApi
+import net.javaman.flowkey.hardwareapis.cuda.CudaApplyBitmap
+import org.jocl.CL.CL_CONTEXT_PLATFORM
+import org.jocl.CL.CL_DEVICE_NAME
+import org.jocl.CL.CL_DEVICE_TYPE_ALL
+import org.jocl.CL.CL_MEM_READ_ONLY
+import org.jocl.CL.CL_MEM_USE_HOST_PTR
+import org.jocl.CL.CL_MEM_WRITE_ONLY
+import org.jocl.CL.CL_PLATFORM_NAME
+import org.jocl.CL.clCreateBuffer
+import org.jocl.CL.clCreateCommandQueueWithProperties
+import org.jocl.CL.clCreateContext
+import org.jocl.CL.clCreateProgramWithSource
+import org.jocl.CL.clGetDeviceIDs
+import org.jocl.CL.clGetDeviceInfo
+import org.jocl.CL.clGetPlatformIDs
+import org.jocl.CL.clGetPlatformInfo
+import org.jocl.CL.clReleaseCommandQueue
+import org.jocl.CL.clReleaseContext
+import org.jocl.CL.clReleaseProgram
+import org.jocl.CL.setExceptionsEnabled
+import org.jocl.Pointer
+import org.jocl.cl_command_queue
+import org.jocl.cl_context
+import org.jocl.cl_context_properties
+import org.jocl.cl_device_id
+import org.jocl.cl_mem
+import org.jocl.cl_platform_id
+import org.jocl.cl_program
+import org.jocl.cl_queue_properties
 
 class OpenClApi constructor(
     platformIndex: Int = 0,
@@ -113,6 +142,8 @@ class OpenClApi constructor(
         OpenClFlowKeyFilter.listName to OpenClFlowKeyFilter(api = this),
         OpenClSplashFilter.listName to OpenClSplashFilter(api = this),
     )
+
+    override fun getApplyBitmap(): AbstractApplyBitmap = CudaApplyBitmap(api = CudaApi()) // TODO
 
     override fun close() {
         clReleaseProgram(program)

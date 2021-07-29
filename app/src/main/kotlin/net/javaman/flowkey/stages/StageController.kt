@@ -10,7 +10,15 @@ import javafx.embed.swing.SwingFXUtils
 import javafx.event.ActionEvent
 import javafx.fxml.FXML
 import javafx.geometry.Side
-import javafx.scene.control.*
+import javafx.scene.control.Button
+import javafx.scene.control.ContextMenu
+import javafx.scene.control.Label
+import javafx.scene.control.ListCell
+import javafx.scene.control.ListView
+import javafx.scene.control.MenuItem
+import javafx.scene.control.TableColumn
+import javafx.scene.control.TableView
+import javafx.scene.control.TitledPane
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.layout.GridPane
@@ -21,12 +29,16 @@ import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.cuda.CudaFlowKeyFilter
 import net.javaman.flowkey.hardwareapis.cuda.CudaGapFillerFilter
+import net.javaman.flowkey.hardwareapis.cuda.CudaInitialComparisonFilter
 import net.javaman.flowkey.hardwareapis.cuda.CudaNoiseReductionFilter
 import net.javaman.flowkey.hardwareapis.opencl.OpenClApi
-import net.javaman.flowkey.hardwareapis.opencl.OpenClFlowKeyFilter
-import net.javaman.flowkey.hardwareapis.opencl.OpenClNoiseReductionFilter
-import net.javaman.flowkey.hardwareapis.opencl.OpenClSplashFilter
-import net.javaman.flowkey.util.*
+import net.javaman.flowkey.util.Camera
+import net.javaman.flowkey.util.DEFAULT_COLOR
+import net.javaman.flowkey.util.NS_PER_MS
+import net.javaman.flowkey.util.ONE_SECOND_NS
+import net.javaman.flowkey.util.format
+import net.javaman.flowkey.util.toBufferedImage
+import net.javaman.flowkey.util.toByteArray
 import java.awt.image.BufferedImage
 
 val logger = KotlinLogging.logger {}
@@ -159,7 +171,7 @@ class StageController {
 
     var cameraId: String = Webcam.getDefault().name
 
-    private var initialBlockAvg: FloatArray? = null
+    var controllerReplacementKey: ByteArray = DEFAULT_COLOR
 
     private var lastInstant = System.nanoTime()
 
@@ -213,12 +225,12 @@ class StageController {
 
     private fun onFrame(originalImage: BufferedImage, frameWidth: Int, frameHeight: Int) {
         val originalFrame = originalImage.toByteArray()
+        var workingBitmap = ByteArray(originalFrame.size / 3)
         val tStart = System.nanoTime()
-        var workingFrame = originalFrame.clone()
         try {
             filters.forEach { filter ->
                 when (filter) {
-                    is OpenClNoiseReductionFilter -> filter.apply {
+                    /*is OpenClNoiseReductionFilter -> filter.apply {
                         templateBuffer = originalFrame
                     }
                     is OpenClFlowKeyFilter -> filter.apply {
@@ -226,14 +238,16 @@ class StageController {
                     }
                     is OpenClSplashFilter -> filter.apply {
                         inputBlockAverageBuffer = initialBlockAvg!!
+                    }*/
+                    is CudaInitialComparisonFilter -> filter.apply {
+                        originalBuffer = originalFrame
                     }
                     is CudaNoiseReductionFilter -> filter.apply {
-                        templateBuffer = originalFrame
                         width = frameWidth
                         height = frameHeight
                     }
                     is CudaFlowKeyFilter -> filter.apply {
-                        templateBuffer = originalFrame
+                        originalBuffer = originalFrame
                         width = frameWidth
                         height = frameHeight
                     }
@@ -242,11 +256,16 @@ class StageController {
                         height = frameHeight
                     }
                 }
-                workingFrame = filter.apply(workingFrame)
+                workingBitmap = filter.apply(workingBitmap)
             }
         } catch (e: ConcurrentModificationException) {
             logger.warn { "A filter was likely changed, resulting in an out-of-sync filter list" }
         }
+        val applyBitmap = api.getApplyBitmap().apply {
+            originalBuffer = originalFrame
+            replacementKey = controllerReplacementKey
+        }
+        val finalFrame = applyBitmap.apply(workingBitmap)
         val tEnd = System.nanoTime()
         if (tEnd - lastInstant > LATENCY_COUNTER_DELAY_NS) {
             val tDelta = tEnd - tStart
@@ -259,7 +278,7 @@ class StageController {
             lastInstant = tEnd
         }
         Thread {
-            val modifiedImage = workingFrame.toBufferedImage(frameWidth, frameHeight)
+            val modifiedImage = finalFrame.toBufferedImage(frameWidth, frameHeight)
             onFXThreadImage(this.originalFrame.imageProperty(), SwingFXUtils.toFXImage(originalImage, null))
             onFXThreadImage(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
         }.start()

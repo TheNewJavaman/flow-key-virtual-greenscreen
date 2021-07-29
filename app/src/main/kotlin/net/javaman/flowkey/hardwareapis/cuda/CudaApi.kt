@@ -3,16 +3,26 @@
 package net.javaman.flowkey.hardwareapis.cuda
 
 import jcuda.Pointer
-import jcuda.driver.*
-import jcuda.driver.CUjitInputType.CU_JIT_INPUT_LIBRARY
-import jcuda.driver.CUjitInputType.CU_JIT_INPUT_PTX
-import jcuda.driver.JCudaDriver.*
+import jcuda.driver.CUcontext
+import jcuda.driver.CUdevice
+import jcuda.driver.CUdeviceptr
+import jcuda.driver.CUfunction
+import jcuda.driver.CUlimit
+import jcuda.driver.CUmodule
+import jcuda.driver.JCudaDriver
+import jcuda.driver.JCudaDriver.cuCtxCreate
+import jcuda.driver.JCudaDriver.cuCtxSetLimit
+import jcuda.driver.JCudaDriver.cuDeviceGet
+import jcuda.driver.JCudaDriver.cuInit
+import jcuda.driver.JCudaDriver.cuMemAlloc
+import jcuda.driver.JCudaDriver.cuMemcpyHtoD
+import jcuda.driver.JCudaDriver.cuModuleGetFunction
+import jcuda.driver.JCudaDriver.cuModuleLoad
 import jcuda.nvrtc.JNvrtc
-import jcuda.nvrtc.JNvrtc.*
-import jcuda.nvrtc.nvrtcProgram
 import mu.KotlinLogging
 import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractApiConsts
+import net.javaman.flowkey.hardwareapis.common.AbstractApplyBitmap
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 
 val logger = KotlinLogging.logger {}
@@ -36,6 +46,8 @@ class CudaApi : AbstractApi {
 
     val gapFillerProgram: CUfunction
 
+    val applyBitmapProgram: CUfunction
+
     val context: CUcontext
 
     init {
@@ -49,38 +61,8 @@ class CudaApi : AbstractApi {
         context = CUcontext()
         cuCtxCreate(context, 0, device)
 
-        val programSource = this::class.java.getResource(KERNELS_FILE)!!.readText()
-        val program = nvrtcProgram()
-        nvrtcCreateProgram(program, programSource, KERNELS_FILE, 0, null, null)
-        val options = arrayOf("-lineinfo")
-        nvrtcCompileProgram(program, options.size, options)
-
-        val programLog = arrayOfNulls<String>(1)
-        nvrtcGetProgramLog(program, programLog)
-        when (val output = programLog[0]) {
-            "" -> logger.info { "Cuda program compiled without output" }
-            else -> logger.info { "Cuda program compiled with the following output:\n${output}" }
-        }
-
-        val ptx = arrayOfNulls<String>(1)
-        nvrtcGetPTX(program, ptx)
-        nvrtcDestroyProgram(program)
-
-        val libPath = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.4\\lib\\x64"
-        val libName = "$libPath\\cudadevrt.lib"
-        val ptxData = ptx[0]!!.encodeToByteArray()
-        val jitOptions = JITOptions()
-
-        val state = CUlinkState()
-        cuLinkCreate(jitOptions, state)
-        cuLinkAddFile(state, CU_JIT_INPUT_LIBRARY, libName, jitOptions)
-        cuLinkAddData(state, CU_JIT_INPUT_PTX, Pointer.to(ptxData), ptxData.size.toLong(), "input.ptx", jitOptions)
-
-        val image = Pointer()
-        cuLinkComplete(state, image, longArrayOf(0))
         val module = CUmodule()
-        cuModuleLoadDataEx(module, image, 0, IntArray(0), Pointer.to(IntArray(0)))
-        cuLinkDestroy(state)
+        cuModuleLoad(module, "src/main/resources/net/javaman/flowkey/hardwareapis/cuda/CudaKernels.cubin")
 
         initialComparisonProgram = CUfunction()
         cuModuleGetFunction(initialComparisonProgram, module, "initialComparisonKernel")
@@ -90,6 +72,8 @@ class CudaApi : AbstractApi {
         cuModuleGetFunction(flowKeyProgram, module, "flowKeyKernel")
         gapFillerProgram = CUfunction()
         cuModuleGetFunction(gapFillerProgram, module, "gapFillerKernel")
+        applyBitmapProgram = CUfunction()
+        cuModuleGetFunction(applyBitmapProgram, module, "applyBitmapKernel")
 
         cuCtxSetLimit(CUlimit.CU_LIMIT_PRINTF_FIFO_SIZE, STDOUT_BUFFER_SIZE)
     }
@@ -100,6 +84,8 @@ class CudaApi : AbstractApi {
         CudaFlowKeyFilter.listName to CudaFlowKeyFilter(api = this),
         CudaGapFillerFilter.listName to CudaGapFillerFilter(api = this)
     )
+
+    override fun getApplyBitmap(): AbstractApplyBitmap = CudaApplyBitmap(api = this)
 
     @Suppress("EmptyFunctionBlock")
     override fun close() {

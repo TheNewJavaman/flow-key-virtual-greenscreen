@@ -12,7 +12,6 @@ import net.javaman.flowkey.FlowKeyApplication
 import net.javaman.flowkey.util.PIXEL_MULTIPLIER
 import java.text.DecimalFormat
 
-
 class FilterPropertyValueTableCell<T> : TableCell<Pair<FilterProperty, Any>, T>() {
     companion object {
         const val INT_STEP = 1
@@ -95,14 +94,14 @@ class FilterPropertyValueTableCell<T> : TableCell<Pair<FilterProperty, Any>, T>(
 
     private fun setColorProperty(data: Pair<FilterProperty, Any>) {
         val originalColor = (data.second as ByteArray).map { it.toUByte().toInt() / PIXEL_MULTIPLIER.toDouble() }
-        val colorPicker = ColorPicker(Color.color(originalColor[0], originalColor[1], originalColor[2]))
+        val colorPicker = ColorPicker(Color.color(originalColor[2], originalColor[1], originalColor[0]))
         val controller = FlowKeyApplication.controller
         val selectedId = controller.filtersListView.selectionModel.selectedItem.id.toInt()
         colorPicker.setOnAction { _ ->
             val newColor = colorPicker.value
             controller.filters[selectedId].setProperty(
                 data.first.listName,
-                listOf(newColor.red, newColor.green, newColor.blue).map {
+                listOf(newColor.blue, newColor.green, newColor.red).map {
                     (it * PIXEL_MULTIPLIER.toDouble()).toInt().toByte()
                 }.toByteArray()
             )

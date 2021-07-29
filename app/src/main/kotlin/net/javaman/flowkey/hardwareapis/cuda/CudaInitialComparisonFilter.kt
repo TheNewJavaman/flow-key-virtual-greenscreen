@@ -1,12 +1,15 @@
-@file:Suppress("WildcardImport")
-
 package net.javaman.flowkey.hardwareapis.cuda
 
 import jcuda.Pointer
 import jcuda.Sizeof
-import jcuda.driver.JCudaDriver.*
+import jcuda.driver.JCudaDriver.cuCtxSetCurrent
+import jcuda.driver.JCudaDriver.cuCtxSynchronize
+import jcuda.driver.JCudaDriver.cuLaunchKernel
+import jcuda.driver.JCudaDriver.cuMemFree
+import jcuda.driver.JCudaDriver.cuMemcpyDtoH
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
 import net.javaman.flowkey.hardwareapis.common.AbstractFilterConsts
+import net.javaman.flowkey.hardwareapis.cuda.CudaApi.Companion.BLOCK_SIZE
 import net.javaman.flowkey.stages.FilterProperty
 import net.javaman.flowkey.util.DEFAULT_COLOR
 import net.javaman.flowkey.util.DEFAULT_TOLERANCE
@@ -20,22 +23,20 @@ class CudaInitialComparisonFilter constructor(
         override val listName = "Initial Comparison"
     }
 
-    private var colorKey = DEFAULT_COLOR
+    lateinit var originalBuffer: ByteArray
 
-    private var replacementKey = DEFAULT_COLOR
+    private var colorKey = DEFAULT_COLOR
 
     private var percentTolerance = DEFAULT_TOLERANCE
 
     override fun getProperties(): Map<FilterProperty, Any> = mapOf(
         FilterProperty.TOLERANCE to percentTolerance,
-        FilterProperty.COLOR_KEY to colorKey,
-        FilterProperty.REPLACEMENT_KEY to replacementKey
+        FilterProperty.COLOR_KEY to colorKey
     )
 
-    override fun setProperty(listName: String, newValue: Any)= when (listName) {
+    override fun setProperty(listName: String, newValue: Any) = when (listName) {
         FilterProperty.TOLERANCE.listName -> percentTolerance = newValue as Float
         FilterProperty.COLOR_KEY.listName -> colorKey = newValue as ByteArray
-        FilterProperty.REPLACEMENT_KEY.listName -> replacementKey = newValue as ByteArray
         else -> throw ArrayIndexOutOfBoundsException("Couldn't find property $listName")
     }
 
@@ -43,24 +44,24 @@ class CudaInitialComparisonFilter constructor(
         cuCtxSetCurrent(api.context)
 
         val inputPtr = api.allocMem(Sizeof.BYTE * inputBuffer.size.toLong(), Pointer.to(inputBuffer))
-        val outputPtr = api.allocMem(Sizeof.BYTE * inputBuffer.size.toLong())
+        val originalPtr = api.allocMem(Sizeof.BYTE * originalBuffer.size.toLong(), Pointer.to(originalBuffer))
         val colorKeyPtr = api.allocMem(Sizeof.BYTE * colorKey.size.toLong(), Pointer.to(colorKey))
-        val replacementKeyPtr = api.allocMem(Sizeof.BYTE * replacementKey.size.toLong(), Pointer.to(replacementKey))
+        val outputPtr = api.allocMem(Sizeof.BYTE * inputBuffer.size.toLong())
 
         val kernelParams = Pointer.to(
             Pointer.to(intArrayOf(inputBuffer.size)),
             Pointer.to(inputPtr),
-            Pointer.to(outputPtr),
+            Pointer.to(originalPtr),
             Pointer.to(colorKeyPtr),
-            Pointer.to(replacementKeyPtr),
-            Pointer.to(intArrayOf((percentTolerance * PIXEL_MULTIPLIER).toInt()))
+            Pointer.to(intArrayOf((percentTolerance * PIXEL_MULTIPLIER).toInt())),
+            Pointer.to(outputPtr)
         )
 
-        val gridSize = ceil(inputBuffer.size / CudaApi.BLOCK_SIZE.toDouble()).toInt()
+        val gridSize = ceil(inputBuffer.size / BLOCK_SIZE.toDouble()).toInt()
         cuLaunchKernel(
             api.initialComparisonProgram,
             gridSize, 1, 1,
-            CudaApi.BLOCK_SIZE, 1, 1,
+            BLOCK_SIZE, 1, 1,
             0, null,
             kernelParams, null
         )
@@ -70,9 +71,9 @@ class CudaInitialComparisonFilter constructor(
         cuMemcpyDtoH(Pointer.to(outputBuffer), outputPtr, Sizeof.BYTE * outputBuffer.size.toLong())
 
         cuMemFree(inputPtr)
-        cuMemFree(outputPtr)
+        cuMemFree(originalPtr)
         cuMemFree(colorKeyPtr)
-        cuMemFree(replacementKeyPtr)
+        cuMemFree(outputPtr)
 
         return outputBuffer
     }

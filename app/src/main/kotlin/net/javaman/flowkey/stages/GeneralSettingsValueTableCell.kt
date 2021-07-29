@@ -2,12 +2,15 @@ package net.javaman.flowkey.stages
 
 import com.github.sarxos.webcam.Webcam
 import javafx.geometry.Pos
+import javafx.scene.control.ColorPicker
 import javafx.scene.control.ComboBox
 import javafx.scene.control.TableCell
+import javafx.scene.paint.Color
 import net.javaman.flowkey.FlowKeyApplication
 import net.javaman.flowkey.FlowKeyApplication.Companion.MAIN_PACKAGE
 import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractApiConsts
+import net.javaman.flowkey.util.PIXEL_MULTIPLIER
 import net.javaman.flowkey.util.toDimension
 import net.javaman.flowkey.util.toListString
 import org.reflections.Reflections
@@ -34,6 +37,7 @@ class GeneralSettingsValueTableCell<T> : TableCell<GeneralSettingsProperty, T>()
                 GeneralSettingsPropertyType.API -> setApiProperty()
                 GeneralSettingsPropertyType.CAMERA -> setCameraProperty()
                 GeneralSettingsPropertyType.RESOLUTION -> setResolutionProperty()
+                GeneralSettingsPropertyType.COLOR -> setColorProperty()
             }
         }
     }
@@ -88,5 +92,19 @@ class GeneralSettingsValueTableCell<T> : TableCell<GeneralSettingsProperty, T>()
         }
         resolutionOption.prefWidth = WIDTH_PIXELS
         graphic = resolutionOption
+    }
+
+    private fun setColorProperty() {
+        val controller = FlowKeyApplication.controller
+        val originalColor = controller.controllerReplacementKey.map {it.toUByte().toInt() / PIXEL_MULTIPLIER.toDouble()}
+        val colorPicker = ColorPicker(Color.color(originalColor[2], originalColor[1], originalColor[0]))
+        colorPicker.setOnAction {
+            val newColor = colorPicker.value
+            controller.controllerReplacementKey = listOf(newColor.blue, newColor.green, newColor.red).map {
+                (it * PIXEL_MULTIPLIER.toDouble()).toInt().toByte()
+            }.toByteArray()
+        }
+        colorPicker.prefWidth = WIDTH_PIXELS
+        graphic = colorPicker
     }
 }

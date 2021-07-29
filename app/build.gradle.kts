@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.lang.ProcessBuilder.Redirect
 import java.util.*
 
 fun getOsString(): String {
@@ -78,4 +79,73 @@ application {
 val compileKotlin: KotlinCompile by tasks
 compileKotlin.kotlinOptions {
     jvmTarget = "16"
+}
+
+// Adapted from https://stackoverflow.com/a/41495542/6909078
+fun List<String>.runCommand(): String {
+    val proc = ProcessBuilder(this)
+        .directory(file("./"))
+        .redirectOutput(Redirect.PIPE)
+        .redirectError(Redirect.PIPE)
+        .start()
+    return proc.inputStream.bufferedReader().readText()
+}
+
+tasks.register("buildCudaFatbin") {
+    val resourcesPath = "src/main/resources/net/javaman/flowkey/hardwareapis/cuda"
+    val sourcePath = "$resourcesPath/CudaKernels.cu"
+    val outputPath = "$resourcesPath/CudaKernels.fatbin"
+    val targetArchs = listOf("61", "75", "86")
+    val command = mutableListOf(
+        "nvcc",
+        sourcePath,
+        "-fatbin",
+        "-o",
+        outputPath,
+        "-lcudadevrt",
+        "-lineinfo",
+        "-dlink",
+        "-rdc",
+        "true"
+    )
+    targetArchs.forEach {
+        command.addAll(
+            command.size,
+            listOf(
+                "-gencode",
+                "arch=compute_$it,code=sm_$it"
+            )
+        )
+    }
+    println(command.runCommand())
+}
+
+tasks.register("buildCudaCubin") {
+    val resourcesPath = "src/main/resources/net/javaman/flowkey/hardwareapis/cuda"
+    val sourcePath = "$resourcesPath/CudaKernels.cu"
+    val outputPath = "$resourcesPath/CudaKernels.cubin"
+    // `86` for my RTX 3070 Ti
+    val targetArchs = listOf("86")
+    val command = mutableListOf(
+        "nvcc",
+        sourcePath,
+        "-cubin",
+        "-o",
+        outputPath,
+        "-lcudadevrt",
+        "-lineinfo",
+        "-dlink",
+        "-rdc",
+        "true"
+    )
+    targetArchs.forEach {
+        command.addAll(
+            command.size,
+            listOf(
+                "-gencode",
+                "arch=compute_$it,code=sm_$it"
+            )
+        )
+    }
+    println(command.runCommand())
 }

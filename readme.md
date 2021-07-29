@@ -13,12 +13,11 @@ Intelligent greenscreen software that adapts to uneven lighting
 
 ## Next Up
 
+- Improve FPS counter and frame latency counter
 - Implement virtual camera
     - Output modified frames to a virtual camera device so that other applications can use the video feed
-- Do not build Cuda program at runtime
-    - Generate fatbins (binaries built for multiple GPU architectures) instead of runtime ptx/cubin compilations
-    - This will decrease startup time
-    - Users won't need developer tools to be installed for the program to run
+- Use Cuda fatbins instead of cubins
+    - Better multi-architecture GPU support
 - Rewrite Cuda pipeline to use a pixel map instead of always operating on the entire image
     - Use boolean logic on a pixel map; instead of comparing an entire color to compare whether a pixel is greenscreen,
       use a binary color map so that there's only one read and one write operation per pixel instead of three each, one
@@ -54,7 +53,6 @@ filter operates on a full RGB image, but the plan is to move to binary "is this 
   replacement color to those pixels
     - In: `original`: Original frame in RGB pixels
     - In: `colorKey`: Color to compare against
-    - In: `replacementKey`: Color to replace with greenscreen
     - In: `tolerance`: Int in [0,255] to show the maximum difference that a greenscreen pixel can have from an original
       pixel
     - Out: `output`: Bitmap that identifies pixels as either 1/true/greenscreen or 0/false/original
@@ -68,7 +66,6 @@ filter operates on a full RGB image, but the plan is to move to binary "is this 
   they are close
     - In: `input`: Input binary bitmap
     - In: `original`: Original frame
-    - In: `replacementKey`: Color to replace with greenscreen
     - In: `tolerance`: Int in [0,255] to show maximum difference
     - In: `width`: Width of the image
     - In: `height`: Height of the image
@@ -78,6 +75,11 @@ filter operates on a full RGB image, but the plan is to move to binary "is this 
     - In: `width`: Width of the image
     - In: `height`: Height of the image
     - Out: `output`: Output binary bitmap
+- `ApplyBitmap`: Applies the results of the bitmap to the original image
+    - In: `input`: Input binary bitmap
+    - In: `original`: Original image
+    - In: `replacementKey`: Greenscreen overlay color  
+    - Out: `modified`: Modified image
 - `Splash`: Compares an original image to a new image, then replaces stale pixels with a replacement color
     - WIP; will focus on this later
 - `SplashPrep`: Generates a block map of average pixel values
