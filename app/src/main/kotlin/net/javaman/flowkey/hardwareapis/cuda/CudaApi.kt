@@ -1,5 +1,3 @@
-@file:Suppress("WildcardImport")
-
 package net.javaman.flowkey.hardwareapis.cuda
 
 import jcuda.Pointer
@@ -19,13 +17,10 @@ import jcuda.driver.JCudaDriver.cuMemcpyHtoD
 import jcuda.driver.JCudaDriver.cuModuleGetFunction
 import jcuda.driver.JCudaDriver.cuModuleLoadData
 import jcuda.nvrtc.JNvrtc
-import mu.KotlinLogging
 import net.javaman.flowkey.hardwareapis.common.AbstractApi
 import net.javaman.flowkey.hardwareapis.common.AbstractApiConsts
 import net.javaman.flowkey.hardwareapis.common.AbstractApplyBitmap
 import net.javaman.flowkey.hardwareapis.common.AbstractFilter
-
-val logger = KotlinLogging.logger {}
 
 class CudaApi : AbstractApi {
     companion object : AbstractApiConsts {

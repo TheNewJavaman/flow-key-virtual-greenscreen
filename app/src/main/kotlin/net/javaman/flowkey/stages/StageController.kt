@@ -32,6 +32,7 @@ import net.javaman.flowkey.hardwareapis.cuda.CudaGapFillerFilter
 import net.javaman.flowkey.hardwareapis.cuda.CudaInitialComparisonFilter
 import net.javaman.flowkey.hardwareapis.cuda.CudaNoiseReductionFilter
 import net.javaman.flowkey.hardwareapis.opencl.OpenClApi
+import net.javaman.flowkey.util.COLOR_DEPTH
 import net.javaman.flowkey.util.Camera
 import net.javaman.flowkey.util.DEFAULT_COLOR
 import net.javaman.flowkey.util.NS_PER_MS
@@ -40,6 +41,7 @@ import net.javaman.flowkey.util.format
 import net.javaman.flowkey.util.toBufferedImage
 import net.javaman.flowkey.util.toByteArray
 import java.awt.image.BufferedImage
+import java.util.LinkedList
 
 val logger = KotlinLogging.logger {}
 
@@ -47,6 +49,8 @@ val logger = KotlinLogging.logger {}
 class StageController {
     companion object {
         const val LATENCY_COUNTER_DELAY_NS = 250_000_000L
+
+        const val FRAME_TIME_QUEUE_MAX_SIZE = 20
     }
 
     @FXML
@@ -175,6 +179,10 @@ class StageController {
 
     private var lastInstant = System.nanoTime()
 
+    private var lastFpsShownInstant = System.nanoTime()
+
+    private var frameTimeQueue = LinkedList<Long>()
+
     init {
         camera = Camera(
             onFrame = ::onFrame,
@@ -224,9 +232,8 @@ class StageController {
     }
 
     private fun onFrame(originalImage: BufferedImage, frameWidth: Int, frameHeight: Int) {
-        val originalFrame = originalImage.toByteArray()
-        var workingBitmap = ByteArray(originalFrame.size / 3)
-        val tStart = System.nanoTime()
+        val originalFrameBytes = originalImage.toByteArray()
+        var workingBitmap = ByteArray(originalFrameBytes.size / COLOR_DEPTH)
         try {
             filters.forEach { filter ->
                 when (filter) {
@@ -240,14 +247,14 @@ class StageController {
                         inputBlockAverageBuffer = initialBlockAvg!!
                     }*/
                     is CudaInitialComparisonFilter -> filter.apply {
-                        originalBuffer = originalFrame
+                        originalBuffer = originalFrameBytes
                     }
                     is CudaNoiseReductionFilter -> filter.apply {
                         width = frameWidth
                         height = frameHeight
                     }
                     is CudaFlowKeyFilter -> filter.apply {
-                        originalBuffer = originalFrame
+                        originalBuffer = originalFrameBytes
                         width = frameWidth
                         height = frameHeight
                     }
@@ -258,30 +265,36 @@ class StageController {
                 }
                 workingBitmap = filter.apply(workingBitmap)
             }
-        } catch (e: ConcurrentModificationException) {
+        } catch (_: ConcurrentModificationException) {
             logger.warn { "A filter was likely changed, resulting in an out-of-sync filter list" }
         }
         val applyBitmap = api.getApplyBitmap().apply {
-            originalBuffer = originalFrame
+            originalBuffer = originalFrameBytes
             replacementKey = controllerReplacementKey
         }
-        val finalFrame = applyBitmap.apply(workingBitmap)
+        val finalFrameBytes = applyBitmap.apply(workingBitmap)
         val tEnd = System.nanoTime()
-        if (tEnd - lastInstant > LATENCY_COUNTER_DELAY_NS) {
-            val tDelta = tEnd - tStart
+        val tDelta = tEnd - lastInstant
+        lastInstant = tEnd
+        frameTimeQueue.add(tDelta)
+        if (frameTimeQueue.size > FRAME_TIME_QUEUE_MAX_SIZE) {
+            frameTimeQueue.remove()
+        }
+        if (tEnd - lastFpsShownInstant > LATENCY_COUNTER_DELAY_NS) {
             onFXThreadText(
                 latencyCounter.textProperty(),
-                "${(tDelta / NS_PER_MS.toDouble()).format(2)}ms Filter Latency"
+                "${(tDelta / NS_PER_MS.toDouble()).format(2)}ms Frame Latency"
             )
-            val fps = ONE_SECOND_NS / tDelta.toDouble()
-            onFXThreadText(fpsCounter.textProperty(), "${fps.format(2)} FPS")
-            lastInstant = tEnd
+            val fps = ONE_SECOND_NS / frameTimeQueue.average()
+            onFXThreadText(
+                fpsCounter.textProperty(),
+                "${fps.format(2)} FPS"
+            )
+            lastFpsShownInstant = tEnd
         }
-        Thread {
-            val modifiedImage = finalFrame.toBufferedImage(frameWidth, frameHeight)
-            onFXThreadImage(this.originalFrame.imageProperty(), SwingFXUtils.toFXImage(originalImage, null))
-            onFXThreadImage(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
-        }.start()
+        val modifiedImage = finalFrameBytes.toBufferedImage(frameWidth, frameHeight)
+        onFXThreadImage(originalFrame.imageProperty(), SwingFXUtils.toFXImage(originalImage, null))
+        onFXThreadImage(modifiedFrame.imageProperty(), SwingFXUtils.toFXImage(modifiedImage, null))
     }
 
     private fun <T> onFXThreadImage(property: ObjectProperty<T>, value: T) = Platform.runLater { property.set(value) }

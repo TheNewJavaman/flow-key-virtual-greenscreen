@@ -218,8 +218,8 @@
               </rowConstraints>
                <children>
                   <Label fx:id="versionLabel" text="Version 0.0.0" />
-                  <Label fx:id="latencyCounter" alignment="CENTER_RIGHT" maxWidth="1.7976931348623157E308" text="0ms Filter Latency" textAlignment="RIGHT" GridPane.columnIndex="2" />
-                  <Label fx:id="fpsCounter" alignment="CENTER_RIGHT" maxWidth="1.7976931348623157E308" text="0 FPS" textAlignment="RIGHT" GridPane.columnIndex="3" />
+                  <Label fx:id="latencyCounter" alignment="CENTER_RIGHT" maxWidth="1.7976931348623157E308" text="0.00ms Frame Latency" textAlignment="RIGHT" GridPane.columnIndex="2" />
+                  <Label fx:id="fpsCounter" alignment="CENTER_RIGHT" maxWidth="1.7976931348623157E308" text="0.00 FPS" textAlignment="RIGHT" GridPane.columnIndex="3" />
                </children>
                <padding>
                   <Insets right="20.0" />
