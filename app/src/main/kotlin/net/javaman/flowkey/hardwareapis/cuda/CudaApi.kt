@@ -17,7 +17,7 @@ import jcuda.driver.JCudaDriver.cuInit
 import jcuda.driver.JCudaDriver.cuMemAlloc
 import jcuda.driver.JCudaDriver.cuMemcpyHtoD
 import jcuda.driver.JCudaDriver.cuModuleGetFunction
-import jcuda.driver.JCudaDriver.cuModuleLoad
+import jcuda.driver.JCudaDriver.cuModuleLoadData
 import jcuda.nvrtc.JNvrtc
 import mu.KotlinLogging
 import net.javaman.flowkey.hardwareapis.common.AbstractApi
@@ -30,8 +30,6 @@ val logger = KotlinLogging.logger {}
 class CudaApi : AbstractApi {
     companion object : AbstractApiConsts {
         override val listName = "Cuda"
-
-        const val KERNELS_FILE = "CudaKernels.cu"
 
         const val BLOCK_SIZE = 256
 
@@ -62,7 +60,8 @@ class CudaApi : AbstractApi {
         cuCtxCreate(context, 0, device)
 
         val module = CUmodule()
-        cuModuleLoad(module, "src/main/resources/net/javaman/flowkey/hardwareapis/cuda/CudaKernels.cubin")
+        val fatbin = this::class.java.getResource("CudaKernels.fatbin")!!.readBytes()
+        cuModuleLoadData(module, fatbin)
 
         initialComparisonProgram = CUfunction()
         cuModuleGetFunction(initialComparisonProgram, module, "initialComparisonKernel")

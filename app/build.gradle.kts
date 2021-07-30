@@ -119,33 +119,3 @@ tasks.register("buildCudaFatbin") {
     }
     println(command.runCommand())
 }
-
-tasks.register("buildCudaCubin") {
-    val resourcesPath = "src/main/resources/net/javaman/flowkey/hardwareapis/cuda"
-    val sourcePath = "$resourcesPath/CudaKernels.cu"
-    val outputPath = "$resourcesPath/CudaKernels.cubin"
-    // `86` for my RTX 3070 Ti
-    val targetArchs = listOf("86")
-    val command = mutableListOf(
-        "nvcc",
-        sourcePath,
-        "-cubin",
-        "-o",
-        outputPath,
-        "-lcudadevrt",
-        "-lineinfo",
-        "-dlink",
-        "-rdc",
-        "true"
-    )
-    targetArchs.forEach {
-        command.addAll(
-            command.size,
-            listOf(
-                "-gencode",
-                "arch=compute_$it,code=sm_$it"
-            )
-        )
-    }
-    println(command.runCommand())
-}
